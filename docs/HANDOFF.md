@@ -28,13 +28,15 @@ zh-HK first + English, endless mode, ads only at natural breaks, Three.js r169 +
 * Extras: check alert (king ring + shockwave + SFX + AI taunt), checkmate drama (slow-mo, glitch, king shatters, red pillar,
   banner), promotion picker (♛♜♝♞), last-move tiles, legal-move dots / capture rings (toggle 提示落點), hint (green), undo,
   local 2P with auto table rotation for chess/xiangqi (toggle 雙人時轉棋盤), piece idle bob, selected lift.
-* **Player camera (v1.1, `js/view.js` + rig in `js/main.js`)** — during play in all four games:
-  * Touch: **pinch** = zoom (anchored: the board point under the fingers stays under them, which is also how you pan),
-    **twist** = rotate around the fingers, **two-finger drag** = orbit (horizontal → azimuth, vertical → tilt).
-    Desktop: **wheel** (and trackpad pinch) = zoom toward the cursor, **right-drag** or **Ctrl/⌘-drag** = orbit;
+* **Player camera (v1.2, `js/view.js` + rig in `js/main.js`)** — during play in all four games:
+  * Touch: **one-finger drag** = rotate / orbit the board (horizontal → azimuth, vertical → tilt; grab-style: drag right
+    and the board turns right, drag down and it tips toward you); **pinch** = zoom (anchored: the board point under the
+    fingers stays under them); **two-finger drag** = pan (only while zoomed in); **twist** = rotate around the fingers (bonus).
+    Desktop: **left-drag** (a click still moves), **right-drag** or **Ctrl/⌘-drag** = orbit; **wheel** (and trackpad
+    pinch) = zoom toward the cursor;
     keys `+`/`-` zoom, `V`/`0` reset. Round **視角 / VIEW** button (bottom-right, aria/title 重設視角 / Reset view via kit
     `data-i18n-attr`) appears whenever the view is not the default and eases back. One-time toast tip on touch devices
-    (`viewTip`). The view resets on every new match / menu.
+    (`viewTip`: 雙指縮放 · 單指拖動旋轉 / Pinch to zoom · drag to rotate). The view resets on every new match / menu.
   * **Limits** (`VIEW_LIMITS`): zoom ×0.40 … ×1.15 of the auto-fit distance (closest: a chess square ≈ 100–130 px on a
     412-px phone; farthest: whole board + rim with margin); azimuth ±70° from the player's seat (added on top of the 2P table
     rotation, so you never end up looking from the opponent's side); absolute elevation 34° … 84° (never edge-on, never past
@@ -43,10 +45,12 @@ zh-HK first + English, endless mode, ads only at natural breaks, Three.js r169 +
   * **Smoothing**: targets are clamped instantly, the camera follows with frame-rate-independent exponential damping
     (rate 14/s ≈ 95 % in 0.2 s). Anchoring is computed on a scratch camera posed at the *target* view, so it stays exact
     while the camera is still catching up.
-  * **Tap vs gesture** (`ViewInput`): a tap = exactly one pointer that moved ≤ 14 px (touch) / 6 px (mouse) and no second
-    finger at any point; a second finger cancels the tap and starts a pinch; pinch / twist / drag each latch only after
-    10 px / 5° / 14 px (jitter filter); after any multi-touch, taps are suppressed until all fingers are up + 260 ms; a
-    one-finger drag does nothing (no accidental camera moves); no hold-time limit (a long press still taps).
+  * **Tap vs drag** (`ViewInput`): a tap = exactly one pointer that moved ≤ 14 px (touch) / 6 px (mouse) and no second
+    finger at any point (no hold-time limit, a long press still taps). Moving past that threshold turns the touch into a
+    rotation drag for the rest of the gesture — it can never become a tap / move, even if it ends on a square — and taps
+    are blocked for 260 ms after it ends. A second finger cancels the tap and starts a pinch; pinch / twist / pan each latch
+    only after 10 px / 5° / 14 px (jitter filter); after any multi-touch, the remaining finger neither taps nor rotates, and
+    taps are blocked until all fingers are up + 260 ms. Sensitivity: 0.0065 rad/px azimuth, 0.0055 rad/px tilt.
     `touch-action: none` on the canvas; context menu disabled on it.
   * **Battles**: gestures are ignored while a capture cinematic runs (taps still skip it); `battle.play` is wrapped to save the
     player view before and restore it after, and the smoothed camera holds still, so the cinematic blends out of — and back
@@ -160,16 +164,19 @@ spec (endless floor), players, planes, humans}`. Controllers talk to the shell o
   fails on any console error. SwiftShader runs at 2–4 FPS so it takes ~8–10 min. It writes PNGs; the committed
   `docs/shots/*.jpg` are the same shots converted to JPEG (q84) to keep the repo small.
 * Before/after on a 412×915 phone: `docs/shots/mob_view_before_after.jpg` (v1.0 · v1.1 default · v1.1 pinched in).
-* `node tests/view.test.mjs` → **19/19** (clamps at every limit for three base pitches, pan scaling, damping convergence /
-  smoothness / frame-rate independence).
-* `/workspace/.venv-pw/bin/python tests/view.py <port> [outdir] [mobile|desktop]` — **52 checks** (36 mobile + 16 desktop). Mobile 412×915 drives real
-  CDP `Input.dispatchTouchEvent` touches: default framing size, taps with 8 px jitter still move (e2-e4), one-finger drag =
-  no tap/no camera, pinch in/out to both zoom clamps (camera distance verified), anchored pinch pans toward the fingers and
-  stays on the board, tap on a knight's *head* in a zoomed + rotated view selects it and plays Nf3, twist to ±70°, two-finger
-  drag to 34° / 84°, tap-target matrix (every cell centre / piece body / crown, 0 misses) in default, low-tilt,
+* `node tests/view.test.mjs` → **30/30** (clamps at every limit for three base pitches, pan scaling, damping convergence /
+  smoothness / frame-rate independence, and the `ViewInput` classifier driven with synthetic pointer events: tap ≤ 14 px,
+  horizontal / vertical one-finger drag → azimuth / tilt with no tap, tap blocked right after a drag and allowed after
+  260 ms, two fingers → zoom + pan with no tap / orbit, drags ignored while disabled (battle), mouse click / left-drag /
+  right-drag).
+* `/workspace/.venv-pw/bin/python tests/view.py <port> [outdir] [mobile|desktop]` — **56 checks** (39 mobile + 17 desktop). Mobile 412×915 drives real
+  CDP `Input.dispatchTouchEvent` touches: default framing size, taps with 8 px jitter still move (e2-e4), a one-finger drag
+  that starts on a pawn rotates (horizontal) / tilts (vertical) without selecting or moving, pinch in/out to both zoom clamps (camera distance verified), anchored pinch pans toward the fingers and
+  stays on the board, tap on a knight's *head* in a zoomed + rotated view selects it and plays Nf3, twist rotates, one-finger drags
+  clamp at ±70° azimuth and 34° / 84° tilt, two-finger drag pans only while zoomed (no rotation), tap-target matrix (every cell centre / piece body / crown, 0 misses) in default, low-tilt,
   top-down-rotated and zoomed-twisted xiangqi views, reset button, pinch during a capture battle is ignored and the view is restored afterwards, and
-  pinch/twist + tap-to-move in xiangqi, flip and sky race. Desktop 1280×800: wheel zoom clamps, right-drag and Ctrl-drag
-  orbit + clamps without tapping, clicks still move in an orbited view (chess, xiangqi, flip, sky race), tap-target
+  pinch/twist + tap-to-move in xiangqi, flip and sky race. Desktop 1280×800: wheel zoom clamps, left-drag starting on a pawn rotates
+  without selecting, right-drag and Ctrl-drag orbit + clamps without tapping, clicks still move in an orbited view (chess, xiangqi, flip, sky race), tap-target
   matrix, `V` resets. Zero console errors. ~8 min.
   Note: touch moves are frame-aligned, so on SwiftShader each move costs a frame (~0.3 s).
 
@@ -192,8 +199,8 @@ Built against **cyber-kit v0.2.1** (tag exists; v0.2.0 + patch: i18n + endless h
 ## 10. Known issues / ideas
 * Xiangqi long-check / long-chase rulings are simplified to the repetition draw.
 * Sky Race has no undo (dice); hint highlights the AI's preferred plane.
-* Camera: no double-tap-to-zoom (it would fight tap-to-select) and no one-finger pan (one finger is reserved for moves);
-  panning comes from anchored pinch / twist. The view is not persisted between matches by design.
+* Camera: no double-tap-to-zoom (it would fight tap-to-select); one finger = taps + rotation, so panning is two-finger
+  drag / anchored pinch. The view is not persisted between matches by design.
 * Performance: the board Reflector renders the scene a second time at half resolution; `?quality=low` disables it. Auto
   pixel-ratio downgrade from the kit is active during play.
 * Ideas: online/async multiplayer, daily puzzle floor, more skins (piece shapes), per-character music stingers, Android packaging

@@ -1,6 +1,6 @@
-// Player camera control for play: pinch zoom, twist / two-finger drag orbit, mouse wheel + right/ctrl-drag,
-// with hard clamps, critically-damped smoothing and a strict tap-vs-gesture classifier so one-finger taps
-// keep selecting / moving pieces. THREE-free (pure state + DOM) so the clamp maths is unit-testable in node.
+// Player camera control for play: ONE-finger drag = orbit (horizontal → azimuth, vertical → tilt), two fingers =
+// pinch zoom + drag pan (+ twist rotate as a bonus), mouse left/right/ctrl-drag = orbit, wheel = zoom, with hard
+// clamps, exponential smoothing and a strict tap-vs-drag classifier so quick taps keep selecting / moving pieces. THREE-free (pure state + DOM) so the clamp maths is unit-testable in node.
 //
 // State is an *offset* on top of the auto-framed rig in main.js:
 //   zoom  multiplier on the fitted distance (1 = whole board framed, < 1 = closer)
@@ -45,6 +45,7 @@ export const isDefaultView = (v, eps = 0.01) => Math.abs(v.zoom - 1) < eps && Ma
  * h.tap(x, y, e)                  a clean one-finger / left-click tap (never fired for gestures)
  * h.zoom(factor, x, y)            multiply zoom (factor < 1 = closer), anchored at screen point
  * h.twist(dRad, x, y)             rotate about the screen point (fingers' rotation)
+ * h.pan(x0, y0, x1, y1)           move the board point under (x0,y0) to (x1,y1) (two-finger drag)
  * h.orbit(dAz, dEl)               orbit around the look target
  * h.gesture(active)               gesture started / ended (for UI, e.g. reveal the reset button)
  * h.down(e)                       any pointerdown (audio unlock)
@@ -67,6 +68,7 @@ export class ViewInput {
     const now = performance.now();
     this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now, type: e.pointerType, btn: e.button, mods: e.ctrlKey || e.metaKey });
     if (this.pts.size === 1) {
+      // left button / one finger: tap until it moves past the slop, then orbit. Right / Ctrl-drag: orbit straight away.
       const orbitBtn = e.pointerType === 'mouse' && (e.button === 2 || (e.button === 0 && (e.ctrlKey || e.metaKey)));
       this.mode = orbitBtn ? 'orbit-pending' : (e.pointerType === 'mouse' && e.button !== 0 ? 'ignore' : 'tap');
     } else if (this.pts.size === 2) {
@@ -84,7 +86,7 @@ export class ViewInput {
     const px = p.x, py = p.y; p.x = e.clientX; p.y = e.clientY;
     if (this.mode === 'tap') {
       const slop = p.type === 'mouse' ? TAP.mouseSlop : TAP.touchSlop;
-      if (Math.hypot(p.x - p.x0, p.y - p.y0) > slop) { this.mode = 'drag1'; this.stats.cancelledTaps++; }   // one-finger drag: no camera move, no tap
+      if (Math.hypot(p.x - p.x0, p.y - p.y0) > slop) { this.mode = 'orbit'; this.stats.cancelledTaps++; this.begin(); }   // drag → orbit, never a tap
     } else if (this.mode === 'orbit-pending' || this.mode === 'orbit') {
       if (this.mode === 'orbit-pending' && Math.hypot(p.x - p.x0, p.y - p.y0) > 3) { this.mode = 'orbit'; this.begin(); }
       if (this.mode === 'orbit' && this.h.enabled()) this.h.orbit(-(p.x - px) * GESTURE.orbitPerPx, (p.y - py) * GESTURE.tiltPerPx);
@@ -98,7 +100,7 @@ export class ViewInput {
       if (this.h.enabled()) {
         if (P.zoomOn && d > 1 && P.d > 1) this.h.zoom(P.d / d, m.x, m.y);
         if (P.twistOn) this.h.twist(wrap(an - P.a), m.x, m.y);
-        if (P.dragOn) this.h.orbit(-(m.x - P.m.x) * GESTURE.orbitPerPx, (m.y - P.m.y) * GESTURE.tiltPerPx);
+        if (P.dragOn) this.h.pan(P.m.x, P.m.y, m.x, m.y);
       }
       P.d = d; P.a = an; P.m = m;
     }
@@ -114,9 +116,9 @@ export class ViewInput {
       if (now >= this.suppressUntil && now - p.t0 <= TAP.maxMs) { this.stats.taps++; this.h.tap(e.clientX, e.clientY, e); }
       return;
     }
-    if (this.mode === 'pinch' || this.mode === 'ignore-multi') this.suppressUntil = now + TAP.afterGestureMs;
+    if (this.mode === 'pinch' || this.mode === 'ignore-multi' || this.mode === 'orbit') this.suppressUntil = now + TAP.afterGestureMs;
     if (this.pts.size === 0) { this.mode = 'idle'; this.end(); }
-    else if (this.mode === 'pinch') this.mode = 'ignore-multi';   // one finger left after a pinch: never becomes a tap
+    else if (this.mode === 'pinch') this.mode = 'ignore-multi';   // one finger left after a pinch: never becomes a tap or orbit
     else if (this.mode === 'ignore-multi' && this.pts.size === 2) this.startPinch();
   }
   onCancel(e) { this.pts.delete(e.pointerId); if (this.pts.size === 0) { this.mode = 'idle'; this.end(); } else this.mode = 'ignore-multi'; }

@@ -1,5 +1,5 @@
 """CYBER BOARD camera-control test — headless Chrome, real CDP touch events at 412x915 and mouse/wheel at 1280x800.
-Pinch / twist / two-finger drag clamps, tap-vs-gesture separation, taps still move pieces in all four games
+One-finger drag orbit / pinch zoom / two-finger pan / twist clamps, tap-vs-drag separation, taps still move pieces in all four games
 (incl. tapping a piece's head), reset-view button, battle save/restore of the view. Fails on any console error.
 
     python -m http.server <port>   # from the repo root
@@ -104,11 +104,17 @@ def mobile(p):
     print('     sel after e2 tap:', sel, 'stats', V(pg)['stats'], 'moves', pg.evaluate('__board.ctrl.pos.moves.map(m => m.san).join(" ")'))
     check(pg.evaluate('__board.ctrl.pos.moves.length') >= 1 and pg.evaluate('__board.ctrl.pos.moves[0].san') == 'e4', 'touch taps (8 px jitter) move e2-e4')
     idle(pg)
-    # one-finger drag: no camera move, no tap
+    # one-finger drag = orbit (never a tap / move): start the drag ON a white pawn so a tap would have selected it
     fen = pg.evaluate('__board.fen()'); taps0 = V(pg)['stats']['taps']
-    T.drag1(200, 500, 60, -40); time.sleep(0.3)
+    d2 = pg.evaluate('__board.cellScreen(84)')
+    T.drag1(d2['x'], d2['y'], 120, 0); time.sleep(0.3)
     v = V(pg)['target']
-    check(V(pg)['stats']['taps'] == taps0 and abs(v['zoom'] - 1) < EPS and abs(v['az']) < EPS and pg.evaluate('__board.fen()') == fen, 'one-finger drag = no tap and no camera move')
+    check(V(pg)['stats']['taps'] == taps0 and v['az'] < -0.3 and abs(v['el']) < EPS and pg.evaluate('__board.fen()') == fen and pg.evaluate('__board.ctrl.sel') < 0,
+          f"one-finger horizontal drag rotates (az {math.degrees(v['az']):.0f}°), no tap / selection / move")
+    T.drag1(206, 520, 0, 80); time.sleep(0.3); v2 = V(pg)['target']
+    check(v2['el'] > 0.1 and abs(v2['az'] - v['az']) < EPS and V(pg)['stats']['taps'] == taps0, f"one-finger vertical drag tilts (el +{math.degrees(v2['el']):.0f}°), no tap")
+    settle(pg); pg.screenshot(path=f'{OUT}/mob_view_after_drag_rotate.png')
+    pg.evaluate('__board.resetView(true)'); settle(pg)
     # pinch out (zoom in) toward the board centre
     c = pg.evaluate('__board.screenAt(0,0,0)')
     T.pinch(c['x'], c['y'], 80, 260); settle(pg)
@@ -138,31 +144,40 @@ def mobile(p):
     tap_cell(pg, T, 76); time.sleep(0.8)
     check(pg.evaluate('__board.ctrl.pos.moves.length') == n0 + 1 and pg.evaluate('__board.ctrl.pos.moves[-1] ? 0 : __board.ctrl.pos.moves[__board.ctrl.pos.moves.length-1].san') == 'Nf3', 'zoomed: tap g1 → f3 plays Nf3')
     idle(pg)
-    # twist: clamp ±azMax
+    # two-finger twist (bonus) still rotates
     pg.evaluate('__board.resetView(true)'); settle(pg)
     T.twist(206, 480, 70, 0, 0.6); v = V(pg)['target']
-    check(v['az'] > 0.4, f"twist rotates (az {math.degrees(v['az']):.0f}°)")
-    for _ in range(4): T.twist(206, 480, 70, 0, 1.2)
+    check(v['az'] > 0.4, f"two-finger twist rotates (az {math.degrees(v['az']):.0f}°)")
+    # one-finger drags: azimuth clamps ±azMax
+    for _ in range(4): T.drag1(60, 520, 300, 0)
     settle(pg); v = V(pg)['target']
-    check(abs(v['az'] - L['azMax']) < 1e-3, f"azimuth clamps at +{math.degrees(L['azMax']):.0f}° (got {math.degrees(v['az']):.1f}°)")
+    check(abs(v['az'] + L['azMax']) < 1e-3, f"drag: azimuth clamps at -{math.degrees(L['azMax']):.0f}° (got {math.degrees(v['az']):.1f}°)")
     pg.screenshot(path=f'{OUT}/mob_view_after_twist.png')
-    for _ in range(8): T.twist(206, 480, 70, 0, -1.2)
+    for _ in range(8): T.drag1(360, 520, -300, 0)
     settle(pg); v = V(pg)['target']
-    check(abs(v['az'] + L['azMax']) < 1e-3, f"azimuth clamps at -{math.degrees(L['azMax']):.0f}°")
-    # two-finger vertical drag: tilt clamps
-    for _ in range(5): T.drag2(206, 600, 0, -260)
+    check(abs(v['az'] - L['azMax']) < 1e-3, f"drag: azimuth clamps at +{math.degrees(L['azMax']):.0f}°")
+    for _ in range(4): T.drag1(60, 520, 300, 0)
+    # one-finger vertical drags: tilt clamps
+    for _ in range(5): T.drag1(206, 760, 0, -400)
     settle(pg); v = V(pg)
     check(abs(v['absPitch'] - L['pitchMin']) < 2e-3, f"tilt clamps at {math.degrees(L['pitchMin']):.0f}° elevation (got {math.degrees(v['absPitch']):.1f}°)")
     pg.screenshot(path=f'{OUT}/mob_view_after_lowtilt.png')
     pm = pg.evaluate('__board.pickMatrix()'); print('     tap-target matrix (34° low tilt, az -70°):', pm['total'], 'spots, misses', pm['miss'][:8])
     check(len(pm['miss']) <= pm['total'] * 0.03, 'low-tilt rotated view: ≥ 97 % of tap spots pick their own cell')
-    for _ in range(6): T.drag2(206, 300, 0, 300)
+    for _ in range(6): T.drag1(206, 300, 0, 400)
     settle(pg); v = V(pg)
     check(abs(v['absPitch'] - L['pitchMax']) < 2e-3, f"tilt clamps at {math.degrees(L['pitchMax']):.0f}° (never flips; got {math.degrees(v['absPitch']):.1f}°)")
     pm = pg.evaluate('__board.pickMatrix()'); print('     tap-target matrix (84° top-down, az -70°):', pm['total'], 'spots, misses', pm['miss'][:8])
     check(not pm['miss'], 'top-down rotated view: tap-target matrix clean')
     cy = pg.evaluate('__board.cam()')[0][1]
     check(cy > 0.5, 'camera stays above the board')
+    # two-finger drag pans only while zoomed in
+    pg.evaluate('__board.resetView(true)'); settle(pg)
+    T.drag2(206, 500, 120, 0); v = V(pg)['target']
+    check(abs(v['px']) < EPS and abs(v['pz']) < EPS and abs(v['az']) < EPS, 'two-finger drag at the fit zoom: no pan, no rotation')
+    pg.evaluate('__board.setView({zoom:0.5})'); settle(pg)
+    T.drag2(206, 500, 120, 60); v = V(pg)['target']
+    check(math.hypot(v['px'], v['pz']) > 0.5 and abs(v['az']) < EPS, f"two-finger drag pans while zoomed (pan {v['px']:.2f},{v['pz']:.2f}), no rotation")
     # pinch in: clamps at max distance, pan recentres
     for _ in range(4): T.pinch(206, 480, 360, 60)
     settle(pg); v = V(pg)['target']
@@ -252,6 +267,12 @@ def desktop(p):
     check(abs(V(pg)['target']['zoom'] - L['zoomMax']) < 1e-3, 'wheel zoom clamps at max')
     pg.evaluate('__board.resetView(true)')
     fen = pg.evaluate('__board.fen()'); taps0 = V(pg)['stats']['taps']
+    e2 = pg.evaluate('__board.cellScreen(85)')     # left-drag starting on a pawn: rotates, never selects / moves
+    pg.mouse.move(e2['x'], e2['y']); pg.mouse.down()
+    for k in range(1, 9): pg.mouse.move(e2['x'] + 25 * k, e2['y'] - 5 * k)
+    pg.mouse.up(); v = V(pg)['target']
+    check(v['az'] < -0.5 and V(pg)['stats']['taps'] == taps0 and pg.evaluate('__board.ctrl.sel') < 0 and pg.evaluate('__board.fen()') == fen, f"left-drag rotates (az {math.degrees(v['az']):.0f}°), no selection / move")
+    pg.evaluate('__board.resetView(true)'); time.sleep(0.4)
     pg.mouse.move(640, 400); pg.mouse.down(button='right')
     for k in range(10): pg.mouse.move(640 + 30 * k, 400 + 6 * k)
     pg.mouse.up(button='right'); v = V(pg)['target']

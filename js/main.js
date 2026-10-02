@@ -208,6 +208,10 @@ const viewInput = new ViewInput($('scene'), {
   down: () => { audio.init(); if (settings.music) audio.startMusic(); },
   zoom: (f, x, y) => anchored(x, y, () => { view.zoom *= f; }),
   twist: (d, x, y) => anchored(x, y, () => { view.az += d; }),
+  pan: (x0, y0, x1, y1) => {            // two-finger drag: the board point under the fingers follows them (only while zoomed in)
+    const c = targetCam(), a = groundUnder(c, x0, y0), b = groundUnder(c, x1, y1);
+    if (a && b) { view.px += a.x - b.x; view.pz += a.z - b.z; clampView(view, cam.pitch, extOf(board.kind || 'chess')); }
+  },
   orbit: (dAz, dEl) => { view.az += dAz; view.el += dEl; clampView(view, cam.pitch, extOf(board.kind || 'chess')); },
   gesture: (on) => { if (on) hideEmotes(); },
   tap: (x, y) => {
