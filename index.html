@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#05010f">
+<meta name="description" content="賽博棋鬥 CYBER BOARD — 國際象棋、中國象棋、黑白棋、飛行棋四合一 3D 賽博朋克棋盤遊戲。每次吃子都會觸發霓虹對決動畫，仲有無盡之塔。">
+<title>賽博棋鬥 CYBER BOARD · 4-in-1 3D board battles</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%2305010f%22/%3E%3Cpath d=%22M4 4h12v12H4zM16 16h12v12H16z%22 fill=%22%2300e5ff%22 opacity=%22.35%22/%3E%3Cpath d=%22M16 7a3 3 0 1 1 0 .1M12 24h8l-1.5-9h-5z%22 fill=%22none%22 stroke=%22%23ff2bd6%22 stroke-width=%222%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./vendor/cyber-kit/ui/hud.css">
+<link rel="stylesheet" href="./css/game.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/cyber-kit/three/three.module.min.js",
+    "three/addons/": "./vendor/cyber-kit/three/addons/",
+    "cyber-kit": "./vendor/cyber-kit/kit.js",
+    "cyber-kit/": "./vendor/cyber-kit/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="fx-flash"></div>
+<div id="scanlines"></div>
+<div id="letterbox"><i class="lb-top"></i><i class="lb-bot"></i></div>
+<div id="battle-card"><div class="bc-names"><b class="bc-a"></b><em>VS</em><b class="bc-v"></b></div><div class="bc-move"></div><div class="bc-move-sub"></div><div class="bc-skip" data-i18n="skip"></div></div>
+
+<div id="hud" class="hidden">
+  <div class="topbar">
+    <div class="pcard me" id="pc-a"><i class="dot" id="pc-a-dot"></i><div><b id="pc-a-name">你</b><small id="pc-a-sub"></small></div><span class="pc-score" id="pc-a-score"></span></div>
+    <div class="mid">
+      <div class="floor-tag" id="hud-floor"></div>
+      <div class="objective" id="hud-obj"></div>
+    </div>
+    <div class="pcard foe" id="pc-b"><span class="pc-score" id="pc-b-score"></span><div><b id="pc-b-name">電腦</b><small id="pc-b-sub"></small></div><i class="avatar" id="pc-b-av">仔</i></div>
+  </div>
+  <div class="sky-roster hidden" id="sky-roster"></div>
+  <div class="bubble hidden" id="bubble"></div>
+  <div class="bubble me hidden" id="bubble-me"></div>
+  <div class="status" id="status"></div>
+  <div class="bottombar">
+    <button class="tool" id="btn-undo"><svg viewBox="0 0 24 24"><path d="M9 7H4V2M4.5 7A8.5 8.5 0 1 1 3.6 13"/></svg><small data-i18n="undo"></small></button>
+    <button class="tool" id="btn-hint"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 3.6 10.8c-.8.6-1.1 1.3-1.1 2.2h-5c0-.9-.3-1.6-1.1-2.2A6 6 0 0 1 12 3z"/></svg><small data-i18n="hint"></small></button>
+    <button class="roll hidden" id="btn-roll"><span data-i18n="rollDice"></span><small data-i18n-alt="rollDice"></small></button>
+    <button class="tool" id="btn-emote"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5c1 1.4 2.3 2 4 2s3-.6 4-2M9 9.5v.5M15 9.5v.5"/></svg><small data-i18n="emote"></small></button>
+    <button class="tool" id="btn-pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg><small data-i18n="pause"></small></button>
+  </div>
+  <div class="emotes hidden" id="emotes">
+    <button data-emote="e.nice"></button><button data-emote="e.ez"></button><button data-emote="e.yikes"></button><button data-emote="e.gg"></button>
+  </div>
+  <div id="demo-tag" class="demo-tag hidden" data-i18n="demo"></div>
+  <div id="fps" class="fps hidden">-- FPS</div>
+</div>
+
+<div class="corner-btns" id="corner-btns">
+  <button id="btn-lang" class="icon-btn lang-btn" aria-label="Language">EN</button>
+  <button id="btn-mute" class="icon-btn" aria-label="Mute">
+    <svg class="ico-on" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke-width="2"/></svg>
+    <svg class="ico-off" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l6 6M22 9l-6 6" fill="none" stroke-width="2"/></svg>
+  </button>
+  <button id="btn-settings" class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-3L3.2 9.3l2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 3z" fill="none" stroke-width="1.6"/></svg></button>
+</div>
+
+<div id="screen-start" class="screen hero">
+  <div class="panel">
+    <div class="kicker" data-i18n="kicker"></div>
+    <h1 class="title glitch" data-text="賽博棋鬥">賽博棋鬥</h1>
+    <div class="title-en">CYBER BOARD</div>
+    <p class="tagline" data-i18n="tagline"></p>
+    <div class="game-grid" id="game-grid">
+      <button class="gcard" data-game="chess"><i class="gi">♞</i><b data-i18n="g.chess"></b><small data-i18n="g.chess.sub"></small><em class="gbest" data-best="chess"></em></button>
+      <button class="gcard" data-game="xiangqi"><i class="gi zh">炮</i><b data-i18n="g.xiangqi"></b><small data-i18n="g.xiangqi.sub"></small><em class="gbest" data-best="xiangqi"></em></button>
+      <button class="gcard" data-game="flip"><i class="gi flipi"><span></span></i><b data-i18n="g.flip"></b><small data-i18n="g.flip.sub"></small><em class="gbest" data-best="flip"></em></button>
+      <button class="gcard" data-game="sky"><i class="gi">✈</i><b data-i18n="g.sky"></b><small data-i18n="g.sky.sub"></small><em class="gbest" data-best="sky"></em></button>
+    </div>
+    <div class="hi-line"><span data-i18n="chips"></span> <b id="chips">0</b></div>
+    <div class="link-row"><a href="./privacy.html" data-i18n="privacy"></a></div>
+  </div>
+</div>
+
+<div id="screen-mode" class="screen hidden">
+  <div class="panel">
+    <div class="kicker" id="mode-kicker">CHESS</div>
+    <h2 class="title2 glitch" id="mode-title" data-text="國際象棋">國際象棋</h2>
+    <p class="rules" id="mode-rules"></p>
+    <button class="neon-btn" id="btn-endless"><span data-i18n="endless"></span><small id="endless-sub"></small></button>
+    <div class="opt-block" id="ai-opts">
+      <div class="opt-row"><label data-i18n="difficulty"></label><div class="seg" id="seg-diff"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button></div></div>
+      <div class="opt-row"><label data-i18n="opponent"></label><button class="char-pick" id="char-pick"><i class="avatar" id="cp-av"></i><span id="cp-name"></span><small id="cp-title"></small></button></div>
+      <div class="sky-only">
+        <div class="opt-row"><label data-i18n="players"></label><div class="seg" id="seg-players"><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div></div>
+        <div class="opt-row"><label data-i18n="humans"></label><div class="seg" id="seg-humans"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button></div></div>
+        <div class="opt-row"><label data-i18n="planes"></label><div class="seg" id="seg-planes"><button data-v="2">2</button><button data-v="4">4</button></div></div>
+      </div>
+    </div>
+    <div class="btn-pair">
+      <button class="neon-btn ghost" id="btn-vsai"><span data-i18n="vsAi"></span><small data-i18n-alt="vsAi"></small></button>
+      <button class="neon-btn ghost" id="btn-local"><span data-i18n="local2p"></span><small data-i18n="local2pSub"></small></button>
+    </div>
+    <button class="text-btn" id="btn-mode-back">‹ <span data-i18n="back"></span></button>
+  </div>
+</div>
+
+<div id="screen-settings" class="screen hidden">
+  <div class="panel small">
+    <h2 class="title2" data-i18n="settings"></h2>
+    <div class="opt-row"><label data-i18n="language"></label><div class="seg" id="set-lang"><button data-v="zh-HK">中文</button><button data-v="en">EN</button></div></div>
+    <div class="opt-row"><label data-i18n="battleFx"></label><div class="seg" id="set-fx"><button data-v="full" data-i18n="fxFull"></button><button data-v="quick" data-i18n="fxQuick"></button><button data-v="off" data-i18n="fxOff"></button></div></div>
+    <div class="opt-row"><label data-i18n="sound"></label><div class="seg" id="set-sound"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
+    <div class="opt-row"><label data-i18n="music"></label><div class="seg" id="set-music"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
+    <div class="opt-row"><label data-i18n="haptics"></label><div class="seg" id="set-haptics"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
+    <div class="opt-row"><label data-i18n="hints"></label><div class="seg" id="set-hints"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
+    <div class="opt-row"><label data-i18n="rotate2p"></label><div class="seg" id="set-rotate"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
+    <div class="opt-row"><label data-i18n="skin"></label><div class="seg skins" id="set-skin"></div></div>
+    <button class="neon-btn" id="btn-settings-close"><span data-i18n="close"></span><small data-i18n-alt="close"></small></button>
+  </div>
+</div>
+
+<div id="screen-pause" class="screen hidden">
+  <div class="panel small">
+    <h2 class="title2 glitch" data-i18n="paused"></h2>
+    <button class="neon-btn" id="btn-resume"><span data-i18n="resume"></span><small data-i18n-alt="resume"></small></button>
+    <button class="neon-btn ghost" id="btn-restart"><span data-i18n="restart"></span><small data-i18n-alt="restart"></small></button>
+    <button class="neon-btn ghost" id="btn-quit"><span data-i18n="quit"></span><small data-i18n-alt="quit"></small></button>
+  </div>
+</div>
+
+<div id="screen-result" class="screen hidden">
+  <div class="panel">
+    <div class="kicker" id="res-kicker"></div>
+    <h2 class="title2 glitch" id="res-title" data-text=""></h2>
+    <div class="title-en" id="res-sub"></div>
+    <div id="res-record" class="newrecord hidden" data-i18n="newRecord"></div>
+    <div class="results" id="res-stats"></div>
+    <div class="reward hidden" id="res-reward"></div>
+    <button class="neon-btn" id="btn-res-main"><span id="res-main"></span><small id="res-main-sub"></small></button>
+    <button class="neon-btn hidden" id="btn-revive"><span data-i18n="revive"></span><small id="revive-sub"></small></button>
+    <button class="neon-btn ghost" id="btn-res-menu"><span data-i18n="menu"></span><small data-i18n-alt="menu"></small></button>
+  </div>
+</div>
+
+<div id="promo" class="screen hidden">
+  <div class="panel small">
+    <h2 class="title2" data-i18n="promote"></h2>
+    <div class="promo-row"><button data-p="5">♛</button><button data-p="4">♜</button><button data-p="3">♝</button><button data-p="2">♞</button></div>
+  </div>
+</div>
+
+<div id="loading" class="loading"><div class="ld-text">CYBER BOARD · 棋盤啟動中…</div></div>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
