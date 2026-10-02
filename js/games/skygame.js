@@ -111,7 +111,7 @@ export class SkyGame {
     if (!this.humanTurn() || this.busy) return;
     if (g.phase === 'roll') { if (point.length() < 1.1) this.roll(); return; }
     if (g.phase !== 'move' || !this.choices) return;
-    const c = g.colour; let best = null, bd = 0.55;
+    const c = g.colour; let best = null, bd = 0.7;   // generous: nearest choice within 0.7 (> one track cell)
     for (const m of this.choices) {
       const j = this.jets[c][m.plane]; const d = Math.hypot(j.root.position.x - point.x, j.root.position.z - point.z); if (d < bd) { bd = d; best = m; }
       const pv = g.preview(c, m), t = this.slotPos(c, pv.to, m.plane); const d2 = Math.hypot(t.x - point.x, t.z - point.z); if (d2 < bd) { bd = d2; best = m; }

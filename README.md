@@ -28,7 +28,9 @@
 
 ## 操作 Controls
 撳棋子再撳目標格（綠點＝可走，紅圈＝可食）。飛行棋撳「擲骰」或者棋盤中間粒骰。對決動畫期間撳任何位置跳過。
-鍵盤：`Esc`/`P` 暫停 · `U` 悔棋 · `H` 提示 · `Space`/`Enter` 擲骰／跳過動畫。
+視角：雙指縮放、扭轉旋轉、雙指拖動傾斜／環繞（有上下限，棋盤唔會反轉）；電腦用滑鼠滾輪縮放、右鍵或 `Ctrl`＋拖動旋轉；右下角「視角」掣還原。
+Camera: pinch to zoom, twist to rotate, two-finger drag to orbit/tilt (clamped); desktop wheel zoom + right-drag / Ctrl-drag; the VIEW button resets.
+鍵盤：`Esc`/`P` 暫停 · `U` 悔棋 · `H` 提示 · `Space`/`Enter` 擲骰／跳過動畫 · `+`/`-` 縮放 · `V` 還原視角。
 
 ## 網址參數 URL flags
 `?demo=1`（`&game=xiangqi|flip|sky`）AI 對 AI 示範 · `?lang=en|zh` · `?fps=1` · `?quality=low` · `?adsim=1` · `?reset=1`
@@ -40,6 +42,8 @@ Three.js r169 + [cyber-kit](https://github.com/fung2222/cyber-kit) **v0.2.1**（
 ```bash
 python3 -m http.server 18977            # any free port, then open http://127.0.0.1:18977/
 node tests/rules.test.mjs               # 82 rules / perft / AI / tower tests
+node tests/view.test.mjs                # 19 camera clamp / damping tests
 /workspace/.venv-pw/bin/python tests/smoke.py 18977   # headless Chrome smoke test, writes docs/shots/
+/workspace/.venv-pw/bin/python tests/view.py 18977    # CDP touch pinch/twist/tap camera test
 ```
 詳細交接文件：[docs/HANDOFF.md](docs/HANDOFF.md) · 私隱政策：[privacy.html](privacy.html)

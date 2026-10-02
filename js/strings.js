@@ -18,6 +18,8 @@ addStrings({
   language: ['語言', 'LANGUAGE'], battleFx: ['吃子對決動畫', 'CAPTURE BATTLES'], fxFull: ['完整', 'FULL'], fxQuick: ['快速', 'QUICK'], fxOff: ['關閉', 'OFF'],
   sound: ['音效', 'SOUND'], music: ['音樂', 'MUSIC'], haptics: ['震動', 'HAPTICS'], hints: ['提示落點', 'MOVE HINTS'], rotate2p: ['雙人時轉棋盤', 'ROTATE BOARD IN 2P'], on: ['開', 'ON'], off: ['關', 'OFF'],
   privacy: ['私隱政策', 'Privacy'],
+  resetView: ['重設視角', 'Reset view'], resetViewShort: ['視角', 'VIEW'],
+  viewTip: ['雙指縮放 · 扭轉旋轉棋盤', 'Pinch to zoom · twist to rotate the board'],
   paused: ['已暫停', 'PAUSED'], resume: ['繼續', 'RESUME'], restart: ['重新開始', 'RESTART'], quit: ['離開', 'QUIT'],
   you: ['你', 'YOU'], p1: ['玩家一', 'PLAYER 1'], p2: ['玩家二', 'PLAYER 2'], player: ['玩家 {n}', 'PLAYER {n}'], ai: ['電腦', 'AI'],
   yourTurn: ['到你', 'YOUR MOVE'], turnOf: ['{n} 嘅回合', "{n}'S TURN"], thinking: ['{n} 諗緊…', '{n} IS THINKING…'],

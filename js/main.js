@@ -15,6 +15,7 @@ import { floorSpec, floorChips, DIFF_STRENGTH, MILESTONE } from './tower.js';
 import { GridGame } from './games/gridgame.js';
 import { FlipGame } from './games/flipgame.js';
 import { SkyGame } from './games/skygame.js';
+import { ViewInput, VIEW_LIMITS, defaultView, clampView, dampView, isDefaultView } from './view.js';
 
 const GAME_ID = 'cyber-board';
 const $ = (id) => document.getElementById(id);
@@ -109,20 +110,32 @@ function battleMode({ human, value, exchange, game, aiOnly }) {
 }
 
 // ---------------------------------------------------------------- camera rig
+// Auto-framed base rig (fitCamera) + the player's view offset (js/view.js: pinch / twist / drag / wheel),
+// smoothed every frame and blended with the capture-battle cinematics (battle.camW).
 const cam = { yaw: 0, yawTarget: 0, dist: 14, pitch: 0.95, offY: 0, menuT: 0, kind: null, look: new THREE.Vector3(), pos: new THREE.Vector3() };
+const view = defaultView(), viewC = defaultView();       // target / smoothed player view
 const _p = new THREE.Vector3();
-function boardPoints(kind) {
-  const ext = { chess: [4.6, 4.6], xiangqi: [4.75, 5.25], flip: [4.6, 4.6], sky: [5.1, 5.1] }[kind] || [4.6, 4.6];
-  const pts = []; for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, 0.9]) pts.push(new THREE.Vector3(sx * ext[0], y, sz * ext[1]));
+// playing area half-extents (squares / intersections incl. piece radius) and the full board with rim + pylons
+const PLAY_EXT = { chess: [4.12, 4.12], xiangqi: [4.5, 5.0], flip: [4.12, 4.12], sky: [4.85, 4.85] };
+const RIM_EXT = { chess: [4.6, 4.6], xiangqi: [4.75, 5.25], flip: [4.6, 4.6], sky: [5.1, 5.1] };
+const GRID_HALF = { chess: [4, 4], xiangqi: [4, 4.5], flip: [4, 4] };   // for clamping edge taps onto the outer cells
+const extOf = (kind) => PLAY_EXT[kind] || PLAY_EXT.chess;
+function boardPoints(kind, play) {
+  const ext = (play ? PLAY_EXT : RIM_EXT)[kind] || RIM_EXT.chess, ys = play ? [0, 0.45] : [0, 0.9];
+  const pts = []; for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of ys) pts.push(new THREE.Vector3(sx * ext[0], y, sz * ext[1]));
   return pts;
 }
 function fitCamera() {
   const kind = board.kind || 'chess', w = stage.width, h = stage.height, portrait = h > w;
-  cam.pitch = portrait ? 1.04 : 0.9;
+  const playing = S.state === 'play' || S.state === 'paused' || S.state === 'result';
+  // portrait play: frame the playing grid edge-to-edge (rim / pylons may bleed off-screen) from a steeper,
+  // narrower-FOV camera so the far rows are nearly as big as the near ones. Menus keep the full hero framing.
+  const fill = portrait && playing;
+  cam.pitch = fill ? 1.2 : portrait ? 1.04 : 0.9;
   const topPx = (S.state === 'play' ? (kind === 'sky' ? 128 : 112) : 40), botPx = S.state === 'play' ? 86 : 30;
-  const availY = 2 - 2 * (topPx + botPx) / h, availX = 1.9;
-  camera.clearViewOffset(); cam.fov = portrait ? 48 : 40; camera.fov = cam.fov; camera.aspect = w / h; camera.updateProjectionMatrix();
-  const pts = boardPoints(kind);
+  const availY = 2 - 2 * (topPx + botPx) / h, availX = fill ? 1.97 : 1.9;
+  camera.clearViewOffset(); cam.fov = fill ? 42 : portrait ? 48 : 40; camera.fov = cam.fov; camera.aspect = w / h; camera.updateProjectionMatrix();
+  const pts = boardPoints(kind, fill);
   const proj = (d) => {
     camera.position.set(0, Math.sin(cam.pitch) * d, Math.cos(cam.pitch) * d); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true);
     let x0 = 9, x1 = -9, y0 = 9, y1 = -9; for (const p of pts) { _p.copy(p).project(camera); x0 = Math.min(x0, _p.x); x1 = Math.max(x1, _p.x); y0 = Math.min(y0, _p.y); y1 = Math.max(y1, _p.y); }
@@ -134,14 +147,26 @@ function fitCamera() {
   const target = 1 - 2 * topPx / h - availY / 2;   // ndc centre of the free area
   cam.offY = (target - (b.y1 + b.y0) / 2) * h / 2;
   cam.kind = kind; camDirty = false;
+  clampView(view, cam.pitch, extOf(kind));
+}
+/** camera pose for the rig + a player view (no battle / shake). Used by the frame update and by anchored gestures. */
+function rigPose(v, outPos, outLook) {
+  const yaw = cam.yaw + v.az, pitch = cam.pitch + v.el, dist = cam.dist * v.zoom;
+  outLook.set(v.px, 0, v.pz);
+  outPos.set(v.px + Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist, v.pz + Math.cos(yaw) * Math.cos(pitch) * dist);
 }
 function updateCamera(dt, now) {
   if (camDirty) fitCamera();
   let dy = cam.yawTarget - cam.yaw; cam.yaw += dy * Math.min(1, dt * 3.2);
-  let yaw = cam.yaw, dist = cam.dist, pitch = cam.pitch, offY = cam.offY, offX = 0;
-  if (S.state !== 'play' && S.state !== 'paused' && S.state !== 'result') { cam.menuT += dt; yaw = cam.menuT * 0.08; dist *= 1.08; pitch = cam.pitch - 0.12; offY = -stage.height * (stage.height > stage.width ? 0.24 : 0.06); if (stage.width > stage.height * 1.2) { offX = -stage.width * 0.2; dist *= 1.12; } }
-  const cx = Math.sin(yaw) * Math.cos(pitch) * dist, cy = Math.sin(pitch) * dist, cz = Math.cos(yaw) * Math.cos(pitch) * dist;
-  cam.pos.set(cx, cy, cz); cam.look.set(0, 0, 0);
+  const playing = S.state === 'play' || S.state === 'paused' || S.state === 'result';
+  if (!battle.busy) dampView(viewC, view, dt);           // camera offsets hold still while a battle cinematic runs
+  let offY = cam.offY, offX = 0;
+  if (playing) rigPose(viewC, cam.pos, cam.look);
+  else {
+    cam.menuT += dt; let yaw = cam.menuT * 0.08, dist = cam.dist * 1.08; const pitch = cam.pitch - 0.12;
+    offY = -stage.height * (stage.height > stage.width ? 0.24 : 0.06); if (stage.width > stage.height * 1.2) { offX = -stage.width * 0.2; dist *= 1.12; }
+    cam.pos.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist, Math.cos(yaw) * Math.cos(pitch) * dist); cam.look.set(0, 0, 0);
+  }
   const w = battle.camW;
   if (w > 0) { cam.pos.lerp(battle.camPos, w); cam.look.lerp(battle.camLook, w); offY *= 1 - w; offX *= 1 - w; }
   camera.position.copy(cam.pos); camera.lookAt(cam.look);
@@ -151,24 +176,108 @@ function updateCamera(dt, now) {
   fx.shake(camera, now, w > 0 ? 0.5 : 0.35);
   // xiangqi glyphs follow the 2P table rotation
   if (S.ctrl && S.ctrl.applyYaw && Math.abs(dy) > 0.001) S.ctrl.applyYaw(cam.yaw);
+  $('btn-view').classList.toggle('on', playing && !isDefaultView(view));
 }
 
-// ---------------------------------------------------------------- picking
-const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2();
-function pickBoard(cx, cy) {
-  ndc.set(cx / stage.width * 2 - 1, -(cy / stage.height) * 2 + 1); ray.setFromCamera(ndc, camera);
+// ---------------------------------------------------------------- player view gestures (pinch / twist / drag / wheel)
+const scratchCam = new THREE.PerspectiveCamera(40, 1, 0.1, 400), _sp = new THREE.Vector3(), _sl = new THREE.Vector3();
+function groundUnder(c, sx, sy) {
+  ndc.set(sx / stage.width * 2 - 1, -(sy / stage.height) * 2 + 1); ray.setFromCamera(ndc, c);
   const out = new THREE.Vector3(); return ray.ray.intersectPlane(plane, out) ? out : null;
 }
-let down = null;
-$('scene').addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; audio.init(); if (settings.music) audio.startMusic(); });
-$('scene').addEventListener('pointerup', (e) => {
-  if (!down) return; const d = Math.hypot(e.clientX - down.x, e.clientY - down.y); down = null;
-  if (d > 18) return;
-  if (battle.busy) { battle.skip(); return; }
-  if (S.state !== 'play' || !S.ctrl || S.demo) return;
-  hideEmotes();
-  S.ctrl.tap(pickBoard(e.clientX, e.clientY));
+/** a camera posed at the *target* view, so anchoring is exact even while the smoothed camera is still catching up */
+function targetCam() {
+  rigPose(view, _sp, _sl); const c = scratchCam;
+  c.fov = cam.fov || 40; c.aspect = stage.width / stage.height; c.position.copy(_sp); c.lookAt(_sl);
+  if (Math.abs(cam.offY) > 0.5) c.setViewOffset(stage.width, stage.height, 0, cam.offY, stage.width, stage.height); else c.clearViewOffset();
+  c.updateProjectionMatrix(); c.updateMatrixWorld(true); return c;
+}
+/** apply a view change keeping the board point under (sx, sy) under the fingers (zoom / twist toward the fingers) */
+function anchored(sx, sy, mutate) {
+  const ext = extOf(board.kind || 'chess');
+  const a = groundUnder(targetCam(), sx, sy);
+  mutate(); clampView(view, cam.pitch, ext);
+  if (!a) return;
+  const b = groundUnder(targetCam(), sx, sy);
+  if (b) { view.px += a.x - b.x; view.pz += a.z - b.z; clampView(view, cam.pitch, ext); }
+}
+const gesturesOn = () => S.state === 'play' && !battle.busy && !!S.ctrl;
+function resetView(instant = false) { Object.assign(view, defaultView()); if (instant) Object.assign(viewC, defaultView()); }
+const viewInput = new ViewInput($('scene'), {
+  enabled: gesturesOn,
+  down: () => { audio.init(); if (settings.music) audio.startMusic(); },
+  zoom: (f, x, y) => anchored(x, y, () => { view.zoom *= f; }),
+  twist: (d, x, y) => anchored(x, y, () => { view.az += d; }),
+  orbit: (dAz, dEl) => { view.az += dAz; view.el += dEl; clampView(view, cam.pitch, extOf(board.kind || 'chess')); },
+  gesture: (on) => { if (on) hideEmotes(); },
+  tap: (x, y) => {
+    if (battle.busy) { battle.skip(); return; }
+    if (S.state !== 'play' || !S.ctrl || S.demo) return;
+    hideEmotes();
+    S.ctrl.tap(pickPoint(x, y));
+  },
 });
+// capture battles: the player's view is saved when a cinematic starts and restored when it ends, whatever happens
+{ const play = battle.play.bind(battle);
+  battle.play = (o) => { const saved = { ...view }; return play(o).then((r) => { Object.assign(view, saved); return r; }); }; }
+
+// ---------------------------------------------------------------- picking (generous hit areas)
+const ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2();
+/** ray vs upright cylinder (axis through (cx, cz), y in [0, h]); returns distance along the ray or Infinity */
+function rayCylinder(o, d, cx, cz, r, h) {
+  let best = Infinity; const ox = o.x - cx, oz = o.z - cz;
+  const A = d.x * d.x + d.z * d.z, B = 2 * (ox * d.x + oz * d.z), C = ox * ox + oz * oz - r * r, disc = B * B - 4 * A * C;
+  if (A > 1e-9 && disc >= 0) { const t = (-B - Math.sqrt(disc)) / (2 * A); const y = o.y + d.y * t; if (t > 0 && y >= 0 && y <= h) best = t; }
+  if (Math.abs(d.y) > 1e-9) { const t = (h - o.y) / d.y; if (t > 0 && t < best) { const x = ox + d.x * t, z = oz + d.z * t; if (x * x + z * z <= r * r) best = t; } }
+  return best;
+}
+/** invisible tap targets: an upright cylinder per piece (r 0.46 cells, piece height + 0.12; chess / xiangqi pieces and
+ *  selectable Sky Race jets) so tapping a tall piece's head picks *its* square instead of the square behind it; the board plane
+ *  covers the rest, where every square / intersection owns its whole cell (no dead gaps) and taps up to 0.45 outside the grid
+ *  snap onto the edge cells. When several targets overlap on screen (low camera, tall pieces) the one whose projected
+ *  silhouette axis (ground → top) is nearest to the finger wins, so both the crown of the front piece and the body of the
+ *  piece behind it stay tappable. */
+function hitTargets() {
+  const c = S.ctrl, k = S.game, out = [];
+  if (!c) return out;
+  if (c.pieces && (k === 'chess' || k === 'xiangqi')) for (const [sq, pc] of c.pieces) { if (!pc.root.visible) continue; const p = board.cellPos(k, sq); out.push({ sq, x: p.x, z: p.z, r: 0.46, h: Math.max(0.32, (pc.height || 0.3) + 0.12), top: pc.height || 0.3 }); }
+  if (k === 'sky' && c.jets) for (const cc in c.jets) for (const j of c.jets[cc]) if (j.selectable && j.root.visible) out.push({ x: j.root.position.x, z: j.root.position.z, r: 0.34, h: 0.6, top: 0.5 });
+  return out;
+}
+const _a = new THREE.Vector3(), _b = new THREE.Vector3();
+function screenOf(v) { _p.copy(v).project(camera); return [(_p.x + 1) / 2 * stage.width, (1 - _p.y) / 2 * stage.height]; }
+function segDist(px, py, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; const t = L > 1e-9 ? Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / L)) : 0;
+  return Math.hypot(px - a[0] - t * dx, py - a[1] - t * dy);
+}
+function pickPoint(cx, cy) {
+  ndc.set(cx / stage.width * 2 - 1, -(cy / stage.height) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const o = ray.ray.origin, d = ray.ray.direction;
+  const ground = new THREE.Vector3(); const onPlane = !!ray.ray.intersectPlane(plane, ground);
+  if (onPlane) {
+    const g = GRID_HALF[S.game];
+    if (g) for (const [ax, half] of [['x', g[0]], ['z', g[1]]]) {
+      const v = ground[ax]; if (Math.abs(v) > half && Math.abs(v) <= half + 0.45) ground[ax] = Math.sign(v) * (S.game === 'xiangqi' ? half : half - 0.001);
+    }
+  }
+  const gsq = onPlane && S.game !== 'sky' ? board.cellAt(S.game, ground.x, ground.z) : -1;
+  // a piece is a candidate if the ray crosses its volume or the ground point lies in its own cell
+  const hits = hitTargets().filter((tg) => tg.sq === gsq && gsq >= 0 || rayCylinder(o, d, tg.x, tg.z, tg.r, tg.h) < Infinity);
+  if (!hits.length) return onPlane ? ground : null;
+  if (S.game === 'sky') { const tg = hits[0]; return new THREE.Vector3(tg.x, 0, tg.z); }
+  // candidates: every piece whose volume the ray crosses + the ground cell itself (if it is empty)
+  const occupied = new Set(hits.map((tg) => tg.sq));
+  let best = null, bd = Infinity;
+  for (const tg of hits) {
+    const dd = segDist(cx, cy, screenOf(_a.set(tg.x, 0, tg.z)), screenOf(_b.set(tg.x, tg.top, tg.z)));
+    if (dd < bd) { bd = dd; best = tg; }
+  }
+  if (gsq >= 0 && !occupied.has(gsq)) {          // the tapped ground cell is empty: it competes by its centre
+    const sc = screenOf(board.cellPos(S.game, gsq)), dd = Math.hypot(cx - sc[0], cy - sc[1]);
+    if (dd < bd) return ground;
+  }
+  return new THREE.Vector3(best.x, 0, best.z);
+}
 document.addEventListener('pointerdown', (e) => { if (battle.busy && e.target.id !== 'scene' && !e.target.closest('button')) battle.skip(); }, true);
 
 // ---------------------------------------------------------------- AI chatter
@@ -218,7 +327,7 @@ function previewBoard(game) {
 }
 function showMenu() {
   S.state = 'menu'; cancelAll(); battle.skip(); fx3d.clear(); ui.hud(false); ui.show('start'); document.body.classList.remove('playing');
-  $('promo').classList.add('hidden'); cam.yawTarget = 0; cam.yaw = 0;
+  $('promo').classList.add('hidden'); cam.yawTarget = 0; cam.yaw = 0; resetView(true);
   paintStart(); previewBoard(S.game || 'chess'); camDirty = true;
 }
 function paintStart() {
@@ -257,7 +366,7 @@ function startMatch(cfg) {
   $('bubble').classList.add('hidden'); $('bubble-me').classList.add('hidden'); hideEmotes();
   $('demo-tag').classList.toggle('hidden', cfg.mode !== 'demo');
   theme.set(GAME_THEME[cfg.game]);
-  cam.yawTarget = 0; cam.yaw = 0; camDirty = true;
+  cam.yawTarget = 0; cam.yaw = 0; resetView(true); camDirty = true;
   const ft = $('hud-floor');
   if (cfg.mode === 'endless') { ft.textContent = (cfg.spec.boss ? t('boss') + ' · ' : '') + t('floor', { n: cfg.spec.floor }); ft.classList.toggle('boss', !!cfg.spec.boss); }
   else { ft.textContent = cfg.mode === 'local' ? t('local2p') : cfg.mode === 'demo' ? 'DEMO' : t('vsAi') + ' · ' + 'Lv' + (cfg.diff || 1); ft.classList.remove('boss'); }
@@ -268,6 +377,8 @@ function startMatch(cfg) {
   if (cfg.mode === 'endless') { const sp = cfg.spec; ui.banner(t('floor', { n: sp.floor }), sp.boss ? t('boss') : tOther('floor', { n: sp.floor }), objectiveText(sp)); if (sp.boss) { audio.levelUp(); fx.kick({ glitch: 0.4 }); } }
   else if (cfg.mode === 'ai' && cfg.game !== 'sky') ui.banner(t('g.' + cfg.game), tOther('g.' + cfg.game), '');
   if (cfg.mode === 'ai' || cfg.mode === 'endless') setTimeout(() => { if (S.state === 'play' && S.cfg === cfg) sayLine('start'); }, 900);
+  // one-time gesture tip (touch devices)
+  if (cfg.mode !== 'demo' && !store.getBool('viewTip', false) && matchMedia('(pointer: coarse)').matches) { store.setBool('viewTip', true); setTimeout(() => { if (S.state === 'play') ui.toast(t('viewTip'), 3400); }, 2600); }
 }
 function objectiveText(sp) {
   if (sp.type === 'rush') return t('obj.rush', { t: sp.target, m: sp.moveLimit });
@@ -425,6 +536,7 @@ ui.on('btn-restart', () => { if (S.state !== 'paused') return; audio.click(); co
 ui.on('btn-quit', () => { if (S.state !== 'paused') return; showMenu(); });
 ui.on('btn-undo', doUndo); ui.on('btn-hint', doHint);
 ui.on('btn-roll', () => { if (S.state === 'play' && S.game === 'sky' && S.ctrl.humanTurn()) S.ctrl.roll(); });
+ui.on('btn-view', () => { audio.back(); resetView(); });
 ui.on('btn-emote', () => { audio.tick(); $('emotes').classList.toggle('hidden'); });
 document.querySelectorAll('#emotes button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); emote(b.dataset.emote); }));
 ui.on('btn-res-main', resultMain); ui.on('btn-res-menu', resultMenu); ui.on('btn-revive', revive);
@@ -436,6 +548,8 @@ window.addEventListener('keydown', (e) => {
   if ((e.key === ' ' || e.key === 'Enter' || e.key === 'r') && S.game === 'sky' && S.ctrl.humanTurn()) { S.ctrl.roll(); e.preventDefault(); }
   if (e.key === 'u' || (e.key === 'z' && (e.ctrlKey || e.metaKey))) doUndo();
   if (e.key === 'h') doHint();
+  if (e.key === 'v' || e.key === '0') resetView();
+  if ((e.key === '+' || e.key === '=' || e.key === '-') && gesturesOn()) anchored(stage.width / 2, stage.height / 2, () => { view.zoom *= e.key === '-' ? 1.15 : 1 / 1.15; });
 });
 Platform.onBack(() => {
   if (ui.closeModal()) return true;
@@ -496,4 +610,24 @@ window.__board = {
   dice: (n) => { app.forceDice = n; },
   skySetup: (list) => { const c = S.ctrl; for (const [col, pl, rel] of list) c.g.pos[col][pl] = rel; c.syncJets(); c.refreshHud(); },
   cam: () => [camera.position.toArray(), camera.fov, battle.camW, battle.camPos.toArray()],
+  /** player view: target, smoothed, limits, base pitch / distance, gesture stats */
+  view: () => ({ target: { ...view }, cur: { ...viewC }, limits: VIEW_LIMITS, pitch: cam.pitch, dist: cam.dist, absPitch: cam.pitch + viewC.el, camDist: camera.position.distanceTo(cam.look), stats: { ...viewInput.stats } }),
+  setView: (v) => { Object.assign(view, v); clampView(view, cam.pitch, extOf(board.kind || 'chess')); }, resetView: (i) => resetView(i),
+  pick: (x, y) => { const p = pickPoint(x, y); return p && [p.x, p.z]; },
+  /** tap-target matrix for grid games: for every cell, tap its ground centre, and for pieces also the body (½ h) and crown (0.92 h);
+   *  returns the misses as [cell, where, picked] */
+  pickMatrix: () => {
+    const k = S.game, n = k === 'chess' ? 120 : k === 'xiangqi' ? 90 : 64, miss = []; let total = 0;
+    for (let i = 0; i < n; i++) {
+      const c = board.cellPos(k, i); if (!c || board.cellAt(k, c.x, c.z) !== i) continue;
+      const pc = S.ctrl.pieces && S.ctrl.pieces.get(i), spots = [['ground', 0]]; if (pc && pc.root.visible) spots.push(['body', pc.height * 0.5], ['crown', pc.height * 0.92]);
+      for (const [w, y] of spots) {
+        const sp = stage.toScreen(new THREE.Vector3(c.x, y, c.z)); if (sp.x < 2 || sp.y < 2 || sp.x > stage.width - 2 || sp.y > stage.height - 2) continue;
+        total++; const p = pickPoint(sp.x, sp.y); const got = p ? board.cellAt(k, p.x, p.z) : -1; if (got !== i) miss.push([i, w, got]);
+      }
+    }
+    return { total, miss };
+  },
+  screenAt: (x, y, z) => stage.toScreen(new THREE.Vector3(x, y, z)),
+  pieceTop: (sq) => { const pc = S.ctrl.pieces && S.ctrl.pieces.get(sq); const p = board.cellPos(S.game, sq); return stage.toScreen(new THREE.Vector3(p.x, (pc ? pc.height : 0.3) * 0.92, p.z)); },
 };

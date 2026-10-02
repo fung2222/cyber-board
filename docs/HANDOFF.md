@@ -28,6 +28,40 @@ zh-HK first + English, endless mode, ads only at natural breaks, Three.js r169 +
 * Extras: check alert (king ring + shockwave + SFX + AI taunt), checkmate drama (slow-mo, glitch, king shatters, red pillar,
   banner), promotion picker (♛♜♝♞), last-move tiles, legal-move dots / capture rings (toggle 提示落點), hint (green), undo,
   local 2P with auto table rotation for chess/xiangqi (toggle 雙人時轉棋盤), piece idle bob, selected lift.
+* **Player camera (v1.1, `js/view.js` + rig in `js/main.js`)** — during play in all four games:
+  * Touch: **pinch** = zoom (anchored: the board point under the fingers stays under them, which is also how you pan),
+    **twist** = rotate around the fingers, **two-finger drag** = orbit (horizontal → azimuth, vertical → tilt).
+    Desktop: **wheel** (and trackpad pinch) = zoom toward the cursor, **right-drag** or **Ctrl/⌘-drag** = orbit;
+    keys `+`/`-` zoom, `V`/`0` reset. Round **視角 / VIEW** button (bottom-right, aria/title 重設視角 / Reset view via kit
+    `data-i18n-attr`) appears whenever the view is not the default and eases back. One-time toast tip on touch devices
+    (`viewTip`). The view resets on every new match / menu.
+  * **Limits** (`VIEW_LIMITS`): zoom ×0.40 … ×1.15 of the auto-fit distance (closest: a chess square ≈ 100–130 px on a
+    412-px phone; farthest: whole board + rim with margin); azimuth ±70° from the player's seat (added on top of the 2P table
+    rotation, so you never end up looking from the opponent's side); absolute elevation 34° … 84° (never edge-on, never past
+    top-down → the board can't flip or be seen from below); pan only while zoomed in, limited to the board half-extent ×
+    (1−zoom)/(1−0.40), so it recentres automatically when you zoom out.
+  * **Smoothing**: targets are clamped instantly, the camera follows with frame-rate-independent exponential damping
+    (rate 14/s ≈ 95 % in 0.2 s). Anchoring is computed on a scratch camera posed at the *target* view, so it stays exact
+    while the camera is still catching up.
+  * **Tap vs gesture** (`ViewInput`): a tap = exactly one pointer that moved ≤ 14 px (touch) / 6 px (mouse) and no second
+    finger at any point; a second finger cancels the tap and starts a pinch; pinch / twist / drag each latch only after
+    10 px / 5° / 14 px (jitter filter); after any multi-touch, taps are suppressed until all fingers are up + 260 ms; a
+    one-finger drag does nothing (no accidental camera moves); no hold-time limit (a long press still taps).
+    `touch-action: none` on the canvas; context menu disabled on it.
+  * **Battles**: gestures are ignored while a capture cinematic runs (taps still skip it); `battle.play` is wrapped to save the
+    player view before and restore it after, and the smoothed camera holds still, so the cinematic blends out of — and back
+    into — exactly the view you had.
+  * **Portrait auto-framing**: in portrait play the camera frames the *playing grid* edge-to-edge (rim / pylons may bleed off
+    the sides) from a steeper 69° / FOV 42° camera, so the far rows are nearly as big as the near ones: chess squares went from
+    35–40 px to 43.5–48 px on a 412×915 phone (≈ +22 %). Menus and landscape keep the full hero framing.
+* **Generous tap targets** (`pickPoint()` in `js/main.js`): the ray is first tested against an invisible upright cylinder
+  per piece (r 0.46 cells, piece height + 0.12; chess/xiangqi pieces and selectable Sky Race jets), so tapping a tall piece's
+  head picks *its* square, not the square behind it; the board plane covers the rest, where every square / intersection
+  owns its whole cell (no dead gaps) and taps up to 0.45 cells outside the grid snap onto the edge cells. Where targets
+  overlap on screen (low camera, tall pieces) the candidate whose projected silhouette axis (ground → top) is nearest to the
+  finger wins (an empty ground cell competes by its centre), so the crown of a front piece and the body of the piece behind
+  it both stay tappable. `__board.pickMatrix()` taps every cell centre + every piece body and crown and reports misses
+  (0 in every tested view). Sky Race picks the nearest legal plane / target within 0.7 (was 0.55).
 
 ## 2. Rules (all in `js/rules/`, pure JS, no DOM — node-testable)
 * **chess.js** — 10×12 mailbox, double 32-bit Zobrist. Castling (incl. through-check), en passant (incl. pinned-ep), promotion with
@@ -85,7 +119,8 @@ QUICK mode = 0.6 s strike without camera move. Everything runs on game time so p
 ```
 index.html            screens (start/mode/settings/pause/result/promo), HUD, importmap → vendor/cyber-kit (v0.2.1)
 css/game.css          HUD + screens on top of cyber-kit/ui/hud.css; letterbox / battle card; body.battling hides HUD
-js/main.js            app shell: stage, NeonCity, board, camera rig (fitCamera solves distance + view offset for HUD margins),
+js/main.js            app shell: stage, NeonCity, board, camera rig (fitCamera solves distance + view offset for HUD margins;
+                      rigPose + player view, anchored gestures, pickPoint with generous hit targets),
                       menus, settings, endless tower + results + rewards, rewarded undo/hint/revive, demo, window.__board hook
 js/i18n.js            re-exports cyber-kit i18n + tOther() + [data-i18n-alt] (other-language subtitles)
 js/strings.js         every zh-HK / English string
@@ -94,6 +129,7 @@ js/boards.js          Board: Reflector surface + canvas-drawn neon layouts (ches
 js/pieces.js          Piece (lathe chess pieces / xiangqi glyph discs, holo shell shader), Disc, Jet, HoloDie
 js/holo.js            shared shaders/materials/geometry helpers, glyph textures, easing
 js/fx3d.js            shards, slashes, beams, orbs, lightning, ghosts, pillars, flash light
+js/view.js            player camera: ViewInput (pinch/twist/drag/wheel/right-drag, tap classifier), VIEW_LIMITS, clamp/damp
 js/battle.js          MOVES catalogue + BattleDirector (timeline scripts, camera, hit-stop, slow-mo, card)
 js/audio.js           BoardAudio extends kit SynthAudio: all SFX synthesised (Web Audio), 'chill' music
 js/characters.js      AI personalities + bilingual lines
@@ -103,6 +139,7 @@ js/games/flipgame.js  flip controller
 js/games/skygame.js   sky race controller
 js/rules/*.js         rules engines (see §2)            js/ai/*.js   AI (see §3)
 tests/rules.test.mjs  node unit tests (82)             tests/smoke.py  headless Chrome smoke test → docs/shots/
+tests/view.test.mjs   camera clamp/damp maths (19)     tests/view.py   CDP-touch camera / tap test → docs/shots/
 privacy.html          bilingual privacy policy (noindex)
 ```
 Controller interface (all three): `start(cfg)`, `tap(worldPoint)`, `update(dt,t,frozen)`, `dispose()`, `canUndo()/undo()`, `hint()`,
@@ -122,10 +159,23 @@ spec (endless floor), players, planes, humans}`. Controllers talk to the shell o
   return-to-hangar, endless floor with real pointer taps and an AI reply from the worker, QUICK/OFF modes, demo autoplay;
   fails on any console error. SwiftShader runs at 2–4 FPS so it takes ~8–10 min. It writes PNGs; the committed
   `docs/shots/*.jpg` are the same shots converted to JPEG (q84) to keep the repo small.
+* Before/after on a 412×915 phone: `docs/shots/mob_view_before_after.jpg` (v1.0 · v1.1 default · v1.1 pinched in).
+* `node tests/view.test.mjs` → **19/19** (clamps at every limit for three base pitches, pan scaling, damping convergence /
+  smoothness / frame-rate independence).
+* `/workspace/.venv-pw/bin/python tests/view.py <port> [outdir] [mobile|desktop]` — **52 checks** (36 mobile + 16 desktop). Mobile 412×915 drives real
+  CDP `Input.dispatchTouchEvent` touches: default framing size, taps with 8 px jitter still move (e2-e4), one-finger drag =
+  no tap/no camera, pinch in/out to both zoom clamps (camera distance verified), anchored pinch pans toward the fingers and
+  stays on the board, tap on a knight's *head* in a zoomed + rotated view selects it and plays Nf3, twist to ±70°, two-finger
+  drag to 34° / 84°, tap-target matrix (every cell centre / piece body / crown, 0 misses) in default, low-tilt,
+  top-down-rotated and zoomed-twisted xiangqi views, reset button, pinch during a capture battle is ignored and the view is restored afterwards, and
+  pinch/twist + tap-to-move in xiangqi, flip and sky race. Desktop 1280×800: wheel zoom clamps, right-drag and Ctrl-drag
+  orbit + clamps without tapping, clicks still move in an orbited view (chess, xiangqi, flip, sky race), tap-target
+  matrix, `V` resets. Zero console errors. ~8 min.
+  Note: touch moves are frame-aligned, so on SwiftShader each move costs a frame (~0.3 s).
 
 ## 7. Storage keys (`cyber.cyber-board.*`) & flags
 `fx` full|quick|off · `hints` · `rotate` · `haptics` · `music` · `muted` · `skin` · `diff` · `char` · `skyPlayers` · `skyPlanes` ·
-`chips` · `tower.chess|xiangqi|flip|sky`. Language = shared `cyber.lang`. Flags: `?demo=1&game=…`, `?lang=`, `?fps=1`,
+`chips` · `tower.chess|xiangqi|flip|sky` · `viewTip` (gesture tip shown once). Language = shared `cyber.lang`. Flags: `?demo=1&game=…`, `?lang=`, `?fps=1`,
 `?quality=low` (no Reflector), `?adsim=1`, `?reset=1`.
 
 ## 8. Ads (via `createAds`, web build shows none)
@@ -142,6 +192,8 @@ Built against **cyber-kit v0.2.1** (tag exists; v0.2.0 + patch: i18n + endless h
 ## 10. Known issues / ideas
 * Xiangqi long-check / long-chase rulings are simplified to the repetition draw.
 * Sky Race has no undo (dice); hint highlights the AI's preferred plane.
+* Camera: no double-tap-to-zoom (it would fight tap-to-select) and no one-finger pan (one finger is reserved for moves);
+  panning comes from anchored pinch / twist. The view is not persisted between matches by design.
 * Performance: the board Reflector renders the scene a second time at half resolution; `?quality=low` disables it. Auto
   pixel-ratio downgrade from the kit is active during play.
 * Ideas: online/async multiplayer, daily puzzle floor, more skins (piece shapes), per-character music stingers, Android packaging
