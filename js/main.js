@@ -8,7 +8,7 @@ import { BoardAudio } from './audio.js';
 import { Board } from './boards.js';
 import { FX3D } from './fx3d.js';
 import { BattleDirector } from './battle.js';
-import { T } from './holo.js';
+import { T, LOOK } from './holo.js';
 import { think, cancelAll } from './ai/client.js';
 import { CHARACTERS, charById } from './characters.js';
 import { floorSpec, floorChips, DIFF_STRENGTH, MILESTONE } from './tower.js';
@@ -23,7 +23,11 @@ const store = createStore(GAME_ID);
 let camDirty = true;
 if (flags.reset) store.clear();
 const ui = new CyberUI({ screens: ['start', 'mode', 'settings', 'pause', 'result'] });
-const stage = createStage({ canvas: $('scene'), bloom: 0.8, bloomRadius: 0.5, bloomThreshold: 0.82, fov: 40, onFatal: (m) => ui.fatal(m) });
+// glow LOW (default): bloom threshold above every piece / board-line brightness so glyphs and edges stay sharp;
+// capture battles, explosions and markers (HDR x2..x5) still bloom. HIGH = the original v1 look.
+const stage = createStage({ canvas: $('scene'), bloom: 0.8, bloomRadius: 0.5, bloomThreshold: 0.82, fov: 40, glowLevels: { low: { strength: 0.5, radius: 0.5, threshold: 0.36, thresholdMax: 1.2 } }, onFatal: (m) => ui.fatal(m) });
+LOOK.crisp = stage.glow === 'low';
+stage.onGlow((g) => { LOOK.crisp = g === 'low'; });
 const { scene, camera } = stage;
 const theme = new ThemeController(); theme.set(1, true);
 const city = new NeonCity(stage, { floor: 'plain', floorY: -2.2, innerRadius: 34, buildings: 300, billboard: { zh: '賽博棋鬥', en: 'C Y B E R   B O A R D', pos: [0, 20, -46], width: 28 }, dustArea: 20, dustHeight: 8 });
@@ -486,7 +490,7 @@ let settingsFrom = null;
 function openSettings() { audio.init(); audio.click(); settingsFrom = S.state === 'paused' ? 'pause' : ui.current || 'start'; ui.show('settings'); paintSettings(); }
 function closeSettings() { audio.back(); ui.show(settingsFrom === 'pause' ? 'pause' : settingsFrom || 'start'); if (settingsFrom === 'start') paintStart(); if (settingsFrom === 'mode') paintModeOpts(); }
 function paintSettings() {
-  segSelect('set-lang', getLang()); segSelect('set-fx', settings.fx); segSelect('set-sound', audio.muted ? 0 : 1); segSelect('set-music', settings.music ? 1 : 0);
+  segSelect('set-lang', getLang()); segSelect('set-fx', settings.fx); segSelect('set-glow', stage.glow); segSelect('set-sound', audio.muted ? 0 : 1); segSelect('set-music', settings.music ? 1 : 0);
   segSelect('set-haptics', settings.haptics ? 1 : 0); segSelect('set-hints', settings.hints ? 1 : 0); segSelect('set-rotate', settings.rotate ? 1 : 0);
   const sk = $('set-skin'); sk.innerHTML = '';
   SKINS.forEach((s, i) => {
@@ -528,6 +532,8 @@ bindSeg('seg-humans', (v) => { S.skyHumans = +v; paintModeOpts(); });
 bindSeg('seg-planes', (v) => { S.skyPlanes = +v; store.setNum('skyPlanes', S.skyPlanes); paintModeOpts(); });
 bindSeg('set-lang', (v) => { setLang(v); paintSettings(); });
 bindSeg('set-fx', (v) => { settings.fx = v; store.set('fx', v); paintSettings(); });
+// shared CYBER glow preference (bloom applies now; piece / board materials on the next board build)
+bindSeg('set-glow', (v) => { stage.setGlow(v, { persist: true }); paintSettings(); });
 bindSeg('set-sound', (v) => { audio.setMuted(v === '0'); ui.setMuted(audio.muted); paintSettings(); });
 bindSeg('set-music', (v) => { settings.music = v === '1'; store.setBool('music', settings.music); audio.setMusic(settings.music); paintSettings(); });
 bindSeg('set-haptics', (v) => { settings.haptics = v === '1'; store.setBool('haptics', settings.haptics); Platform.setHaptics(settings.haptics); paintSettings(); });

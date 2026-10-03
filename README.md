@@ -36,7 +36,7 @@ Camera: drag with one finger to rotate/tilt (a quick tap still moves), pinch to 
 `?demo=1`（`&game=xiangqi|flip|sky`）AI 對 AI 示範 · `?lang=en|zh` · `?fps=1` · `?quality=low` · `?adsim=1` · `?reset=1`
 
 ## 技術 Tech
-Three.js r169 + [cyber-kit](https://github.com/fung2222/cyber-kit) **v0.2.1**（`vendor/cyber-kit/`，含 i18n），冇 build step。規則引擎、AI（alpha-beta 搜尋喺 Web Worker 入面行）、棋子模型、音效全部原創、程式生成。冇使用任何商標名稱（「Flip」「Sky Race」係原創英文名）。
+Three.js r169 + [cyber-kit](https://github.com/fung2222/cyber-kit) **v0.3.0**（`vendor/cyber-kit/`，含 i18n），冇 build step。規則引擎、AI（alpha-beta 搜尋喺 Web Worker 入面行）、棋子模型、音效全部原創、程式生成。冇使用任何商標名稱（「Flip」「Sky Race」係原創英文名）。
 
 ## 開發 Development
 ```bash

@@ -2,7 +2,7 @@
 // transient (noise click) + body (pitched thump) + tail (filtered noise / delay send), all fired on the contact frame.
 import { SynthAudio, mtof } from 'cyber-kit/audio/synth.js';
 export class BoardAudio extends SynthAudio {
-  constructor(store) { super({ store, music: 'chill' }); this.musicOn = store.getBool('music', true); }
+  constructor(store) { super({ store, music: 'chill', sfxTrimDb: -3.5 }); this.musicOn = store.getBool('music', true); }
   startMusic() { if (this.musicOn) super.startMusic(); }
   setMusic(on) { this.musicOn = on; if (on) super.startMusic(); else this.stopMusic(); }
   select() { this.osc({ type: 'triangle', f: 880, f2: 1320, dur: 0.06, vol: 0.05 }); }

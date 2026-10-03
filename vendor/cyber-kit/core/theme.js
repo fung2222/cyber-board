@@ -6,7 +6,7 @@ import * as THREE from 'three';
 export const U = {
   uTime: { value: 0 },
   uFogColor: { value: new THREE.Color(0x12051f) },
-  uFogDensity: { value: 0.017 },
+  uFogDensity: { value: 0.012 },   // v0.3.0: was 0.017 (too hazy over the play field)
   uC1: { value: new THREE.Color(0x00f0ff) },     // primary neon
   uC2: { value: new THREE.Color(0xff2bd6) },     // secondary neon
   uC3: { value: new THREE.Color(0xfff35c) },     // accent

@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { T, glowMat, additive } from './holo.js';
+import { T, glowMat, additive, pick } from './holo.js';
 
 export const SKY_CELL = 0.64;
 const COLS = ['#00e5ff', '#ff2bd6', '#ffd23c', '#3bff8a'];
@@ -26,7 +26,8 @@ export const skyWorld = ([c, r]) => new THREE.Vector3((c - 7) * SKY_CELL, 0, (r 
 
 // ---------------------------------------------------------------- board canvases
 function canvasFor(w, h) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return [cv, cv.getContext('2d')]; }
-function glowLine(g, color, width, blur) { g.strokeStyle = color; g.lineWidth = width; g.shadowColor = color; g.shadowBlur = blur; }
+// crisp look: much smaller canvas shadow blur so grid lines stay sharp (glow is an accent only)
+function glowLine(g, color, width, blur) { g.strokeStyle = color; g.lineWidth = width; g.shadowColor = color; g.shadowBlur = pick(blur, Math.min(blur * 0.25, 3)); }
 function drawChess(size, inner) {
   const [cv, g] = canvasFor(size, size); const px = size / inner, o = (inner - 8) / 2 * px;
   g.fillStyle = '#000'; g.fillRect(0, 0, size, size);
@@ -144,7 +145,7 @@ export class Board {
     else cv = drawSky(1600, W, opts.colours || [0, 1, 2, 3]);
     this.tex = new THREE.CanvasTexture(cv); this.tex.colorSpace = THREE.SRGBColorSpace; this.tex.anisotropy = 8;
     this.tint.set(kind === 'flip' ? 0x3bff8a : kind === 'xiangqi' ? 0xff2bd6 : 0x00e5ff);
-    const uniforms = { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uMap: { value: this.tex }, uTime: T, uPulse: { value: this.pulse }, uTint: { value: this.tint }, uRefl: { value: 0.5 } };
+    const uniforms = { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uMap: { value: this.tex }, uTime: T, uPulse: { value: this.pulse }, uTint: { value: this.tint }, uRefl: { value: pick(0.5, 0.26) } };
     const shader = {
       name: 'NeonBoard', uniforms,
       vertexShader: /* glsl */`uniform mat4 textureMatrix; varying vec4 vUvR; varying vec2 vUv; varying vec3 vW;
@@ -177,10 +178,10 @@ export class Board {
     }
     this.surface.rotation.x = -Math.PI / 2; this.group.add(this.surface);
     // slab + edges
-    const slabMat = new THREE.MeshStandardMaterial({ color: 0x0c0a1c, metalness: 0.85, roughness: 0.3 });
+    const slabMat = new THREE.MeshStandardMaterial({ color: 0x0c0a1c, metalness: 0.85, roughness: 0.3, fog: false });
     this.slab = new THREE.Mesh(new RoundedBoxGeometry(W + 0.5, 0.55, D + 0.5, 3, 0.12), slabMat); this.slab.position.y = -0.29; this.group.add(this.slab);
     const ped = new THREE.Mesh(new THREE.CylinderGeometry(W * 0.32, W * 0.42, 6, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0x07051a, metalness: 0.7, roughness: 0.5 })); ped.position.y = -3.5; this.group.add(ped);
-    this.edgeMat = glowMat(0x00e5ff, 2.4); this.edgeMat2 = glowMat(0xff2bd6, 2.2);
+    this.edgeMat = glowMat(0x00e5ff, pick(2.4, 1.5)); this.edgeMat2 = glowMat(0xff2bd6, pick(2.2, 1.3));
     const e = (w2, d2, x, z, y, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w2, 0.045, d2), m); b.position.set(x, y, z); this.group.add(b); };
     e(W + 0.52, 0.045, 0, (D + 0.5) / 2, -0.03, this.edgeMat); e(W + 0.52, 0.045, 0, -(D + 0.5) / 2, -0.03, this.edgeMat);
     e(0.045, D + 0.52, (W + 0.5) / 2, 0, -0.03, this.edgeMat); e(0.045, D + 0.52, -(W + 0.5) / 2, 0, -0.03, this.edgeMat);

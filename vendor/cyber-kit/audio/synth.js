@@ -1,25 +1,61 @@
 // SynthAudio - every sound is synthesised live with the Web Audio API (no audio files -> tiny, offline).
 // Subclass it for game-specific SFX:  class FuseAudio extends SynthAudio { merge(v){ this.osc({...}) } }
+//
+// v0.3.0 loudness model (shared by every CYBER game so they all sound equally loud):
+//   sfx bus  (0.9 x KIT_SFX_GAIN x sfxTrimDb x sfxVolume) ─┐
+//   music bus (preset.gain x preset.trimDb x musicTrimDb x musicVolume) ─┼─> sum -> glue compressor -> limiter -> soft clip -> out (volume curve, mute) -> speakers
+//   delay return ─────────────────────────────────────────┘
+// Presets are calibrated so the music measures ≈ LOUDNESS.musicLufs (BS.1770 integrated, 48 kHz offline render, volume 1).
+// SFX are calibrated per game (sfxTrimDb) so the median SFX event peaks (400 ms momentary) ≈ LOUDNESS.musicLufs + LOUDNESS.sfxOverMusicDb.
 export const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+export const dbToGain = db => Math.pow(10, db / 20);
 
-/** Music presets for the built-in step sequencer. */
+/** shared loudness targets (see docs/API.md "Loudness") */
+export const LOUDNESS = { musicLufs: -20, sfxOverMusicDb: 0, volumeRangeDb: 40 };
+/** kit-wide SFX make-up gain in dB (v0.3.0): kit SFX were authored ~15 dB below the new music level */
+export const KIT_SFX_GAIN_DB = 14;
+
+/**
+ * Perceptual volume curve shared by all games: slider 0..1 -> linear gain.
+ * 0 = silent, otherwise dB-linear over LOUDNESS.volumeRangeDb (1 = 0 dB, 0.5 = -20 dB, 0.25 = -30 dB).
+ */
+export function volumeToGain(v) {
+  v = Math.max(0, Math.min(1, +v || 0));
+  return v <= 0 ? 0 : dbToGain((v - 1) * LOUDNESS.volumeRangeDb);
+}
+
+const VOL_KEY = 'cyber.audio';
+/** shared (not per game) volume prefs: { master, music, sfx } each 0..1 slider positions */
+export function loadVolumes() {
+  const d = { master: 1, music: 1, sfx: 1 };
+  try { const j = JSON.parse(localStorage.getItem(VOL_KEY) || '{}'); for (const k of Object.keys(d)) if (typeof j[k] === 'number') d[k] = Math.max(0, Math.min(1, j[k])); } catch (e) { /* storage blocked */ }
+  return d;
+}
+function saveVolumes(v) { try { localStorage.setItem(VOL_KEY, JSON.stringify(v)); } catch (e) { /* ignore */ } }
+
+/** Music presets for the built-in step sequencer. trimDb = loudness calibration (v0.3.0) applied on top of gain. */
 export const MUSIC = {
   // driving synthwave (cyber-snake)
-  drive: { bpm: 100, bpmPerLevel: 4, bpmMax: 132, roots: [45, 41, 48, 43], chords: [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]], kick: 'four', hats: true, bass: 'eighths', arp: true, pad: 0.022, gain: 0.42 },
+  drive: { bpm: 100, bpmPerLevel: 4, bpmMax: 132, roots: [45, 41, 48, 43], chords: [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]], kick: 'four', hats: true, bass: 'eighths', arp: true, pad: 0.022, gain: 0.42, trimDb: 3.9 },
   // relaxed lo-fi synth for puzzle / zen games
-  chill: { bpm: 84, bpmPerLevel: 0, bpmMax: 84, roots: [45, 41, 36, 43], chords: [[0, 3, 7, 10], [0, 4, 7, 11], [0, 4, 7, 11], [0, 4, 7, 10]], kick: 'half', hats: 'soft', bass: 'roots', arp: 'sparse', pad: 0.03, gain: 0.34 },
+  chill: { bpm: 84, bpmPerLevel: 0, bpmMax: 84, roots: [45, 41, 36, 43], chords: [[0, 3, 7, 10], [0, 4, 7, 11], [0, 4, 7, 11], [0, 4, 7, 10]], kick: 'half', hats: 'soft', bass: 'roots', arp: 'sparse', pad: 0.03, gain: 0.34, trimDb: 10.2 },
 };
 
 export class SynthAudio {
   /**
    * @param {object} [o]
    * @param {object} [o.store]  createStore() instance; mute state persisted as cyber.<game>.muted
-   * @param {object|string} [o.music='drive']  preset name or preset object
+   * @param {object|string} [o.music='drive']  preset name or preset object (custom presets: add trimDb or pass musicTrimDb)
+   * @param {number} [o.musicTrimDb=0]  per-game music loudness trim (dB)
+   * @param {number} [o.sfxTrimDb=0]    per-game SFX loudness trim (dB)
+   * @param {number} [o.volume]         initial master slider 0..1 (default: shared cyber.audio pref)
    */
   constructor(o = {}) {
     this.store = o.store || null;
     this.muted = this.store ? this.store.getBool('muted', false) : false;
-    this.ctx = null; this.musicPlaying = false; this.level = 1; this.volume = o.volume ?? 0.85;
+    this.ctx = null; this.musicPlaying = false; this.level = 1;
+    this.vol = loadVolumes(); if (typeof o.volume === 'number') this.vol.master = o.volume;
+    this.musicTrimDb = o.musicTrimDb || 0; this.sfxTrimDb = o.sfxTrimDb || 0;
     this.preset = typeof o.music === 'object' ? o.music : (MUSIC[o.music || 'drive'] || MUSIC.drive);
     this._hiddenSuspended = false;
     if (typeof document !== 'undefined') {
@@ -39,11 +75,18 @@ export class SynthAudio {
     // never create the context before a real user gesture (avoids autoplay warnings in demo / attract mode)
     if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
     const ctx = this.ctx = new AC();
-    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : this.volume;
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
-    this.master.connect(comp); comp.connect(ctx.destination);
-    this.sfx = ctx.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(this.master);
+    // fixed-gain sum -> glue compressor -> limiter -> soft clip -> user volume/mute -> destination
+    this.master = ctx.createGain(); this.master.gain.value = 1;
+    const comp = this.comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 2.5; comp.attack.value = 0.006; comp.release.value = 0.25;
+    const lim = this.limiter = ctx.createDynamicsCompressor();
+    lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
+    const clip = ctx.createWaveShaper(); const cc = new Float32Array(2049);
+    for (let i = 0; i < cc.length; i++) { const x = i / 1024 - 1, ax = Math.abs(x); cc[i] = ax < 0.8 ? x : Math.sign(x) * (0.8 + 0.2 * Math.tanh((ax - 0.8) / 0.2)); }
+    clip.curve = cc; clip.oversample = '2x';
+    this.out = ctx.createGain(); this.out.gain.value = this._outGain();
+    this.master.connect(comp); comp.connect(lim); lim.connect(clip); clip.connect(this.out); this.out.connect(ctx.destination);
+    this.sfx = ctx.createGain(); this.sfx.gain.value = this._sfxGain(); this.sfx.connect(this.master);
     this.music = ctx.createGain(); this.music.gain.value = 0.0; this.music.connect(this.master);
     this.musicFilter = ctx.createBiquadFilter(); this.musicFilter.type = 'lowpass'; this.musicFilter.frequency.value = 18000;
     this.musicFilter.connect(this.music);
@@ -62,14 +105,34 @@ export class SynthAudio {
   }
   get ready() { return !!this.ctx; }
 
+  // ---------- volume (v0.3.0) ----------
+  _outGain() { return this.muted ? 0 : volumeToGain(this.vol.master); }
+  _sfxGain() { return 0.9 * dbToGain(KIT_SFX_GAIN_DB + this.sfxTrimDb) * volumeToGain(this.vol.sfx); }
+  _musicGain() { return (this.preset.gain ?? 0.4) * dbToGain((this.preset.trimDb || 0) + this.musicTrimDb) * volumeToGain(this.vol.music); }
+  /** master slider position 0..1 (shared by all CYBER games) */
+  get volume() { return this.vol.master; }
+  set volume(v) { this.setVolume(v); }
+  /** set a slider (master | music | sfx) 0..1, perceptual curve volumeToGain(); persisted in localStorage cyber.audio */
+  setVolume(v, which = 'master') {
+    this.vol[which] = Math.max(0, Math.min(1, +v || 0)); saveVolumes(this.vol);
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    if (which === 'master') this.out.gain.setTargetAtTime(this._outGain(), t, 0.03);
+    else if (which === 'sfx') this.sfx.gain.setTargetAtTime(this._sfxGain(), t, 0.03);
+    else if (which === 'music' && this.musicPlaying) this.music.gain.setTargetAtTime(this._musicGain(), t, 0.05);
+  }
+  setMusicVolume(v) { this.setVolume(v, 'music'); }
+  setSfxVolume(v) { this.setVolume(v, 'sfx'); }
+  getVolumes() { return { ...this.vol }; }
+
   setMuted(m) {
     this.muted = !!m;
     if (this.store) this.store.setBool('muted', this.muted);
-    if (this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : this.volume, this.ctx.currentTime, 0.03);
+    if (this.ctx) this.out.gain.setTargetAtTime(this._outGain(), this.ctx.currentTime, 0.03);
   }
   toggleMute() { this.setMuted(!this.muted); return this.muted; }
   /** temporarily silence everything (e.g. while a full-screen ad shows) without changing the saved mute setting */
-  duckAll(on) { if (this.ctx) this.master.gain.setTargetAtTime(on || this.muted ? 0 : this.volume, this.ctx.currentTime, 0.05); }
+  duckAll(on) { if (this.ctx) this.out.gain.setTargetAtTime(on ? 0 : this._outGain(), this.ctx.currentTime, 0.05); }
 
   // ---------- primitives ----------
   osc({ type = 'sine', f = 440, f2 = null, t = 0, dur = 0.1, vol = 0.2, a = 0.005, out = null, send = 0, detune = 0, q = null, lp = null }) {
@@ -148,7 +211,7 @@ export class SynthAudio {
     if (!this.ctx || this.musicPlaying) return;
     this.musicPlaying = true;
     const t = this.ctx.currentTime;
-    this.music.gain.cancelScheduledValues(t); this.music.gain.setTargetAtTime(this.preset.gain, t, 0.4);
+    this.music.gain.cancelScheduledValues(t); this.music.gain.setTargetAtTime(this._musicGain(), t, 0.4);
     this.unduckMusic();
     this.step = 0; this.nextTime = t + 0.08;
     this.timer = setInterval(() => this.schedule(), 25);

@@ -3,12 +3,12 @@
 export const KIT_VERSION = '0.2.1';
 export { parseFlags, flags } from './core/flags.js';
 export { createStore } from './core/storage.js';
-export { createStage } from './core/renderer.js';
+export { createStage, GLOW_LEVELS, getGlowPref, setGlowPref } from './core/renderer.js';
 export { CyberShader } from './core/post.js';
 export { U, THEMES, themeFor, ThemeController, themeLabel } from './core/theme.js';
 export { Particles, Shockwaves, FxState } from './core/fx.js';
 export { NeonCity, NOISE_GLSL, FOG_GLSL } from './core/backdrop.js';
-export { SynthAudio, MUSIC, mtof } from './audio/synth.js';
+export { SynthAudio, MUSIC, mtof, dbToGain, volumeToGain, loadVolumes, LOUDNESS, KIT_SFX_GAIN_DB } from './audio/synth.js';
 export { createInput, DEFAULT_KEYS, DEFAULT_ACTIONS } from './input/input.js';
 export { CyberUI } from './ui/ui.js';
 export { STR, t2 } from './ui/strings.js';

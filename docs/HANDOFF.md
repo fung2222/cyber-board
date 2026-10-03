@@ -121,7 +121,7 @@ QUICK mode = 0.6 s strike without camera move. Everything runs on game time so p
 
 ## 5. File map
 ```
-index.html            screens (start/mode/settings/pause/result/promo), HUD, importmap → vendor/cyber-kit (v0.2.1)
+index.html            screens (start/mode/settings/pause/result/promo), HUD, importmap → vendor/cyber-kit (v0.3.0)
 css/game.css          HUD + screens on top of cyber-kit/ui/hud.css; letterbox / battle card; body.battling hides HUD
 js/main.js            app shell: stage, NeonCity, board, camera rig (fitCamera solves distance + view offset for HUD margins;
                       rigPose + player view, anchored gestures, pickPoint with generous hit targets),
@@ -205,3 +205,7 @@ Built against **cyber-kit v0.2.1** (tag exists; v0.2.0 + patch: i18n + endless h
   pixel-ratio downgrade from the kit is active during play.
 * Ideas: online/async multiplayer, daily puzzle floor, more skins (piece shapes), per-character music stingers, Android packaging
   (`/android/` ignored; follow the arcade Capacitor recipe), Play Games achievements for tower milestones.
+
+## Audio loudness + glow (cyber-kit v0.3.0, 2026-10-03)
+- Audio: kit loudness model (music ≈ −20 LUFS integrated, median SFX ≈ music level). This game: music 'chill', sfxTrimDb -3.5 in `js/audio.js`. Re-measure after changing sounds: `python3 ../cyber-kit/tests/loudness.py http://127.0.0.1:18940 <dir>:<AudioClass> --kit /cyber-kit` (see kit docs/API.md "Loudness"). Keep music −20 ± 1 LUFS and SFX/BGM 0 ± 2 dB.
+- Glow: `createStage` values are the HIGH look; default is LOW (crisp). Shared pref `localStorage cyber.glow`, `?glow=low|high`. Settings → GLOW (LOW · CRISP / HIGH). LOW also uses `glowLevels.low` (threshold 1.18) and `holo.js LOOK.crisp` (piece shells / rings / glyphs / board lines below the bloom threshold, less canvas blur, weaker board reflection, no fog on board + pieces) — effects and capture battles still bloom. Material changes apply on the next board build.

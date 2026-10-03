@@ -16,6 +16,7 @@ addStrings({
   players: ['玩家數', 'PLAYERS'], humans: ['真人', 'HUMANS'], planes: ['每人飛機', 'PLANES'],
   back: ['返回', 'BACK'], start: ['開始', 'START'], settings: ['設定', 'SETTINGS'], close: ['關閉', 'CLOSE'],
   language: ['語言', 'LANGUAGE'], battleFx: ['吃子對決動畫', 'CAPTURE BATTLES'], fxFull: ['完整', 'FULL'], fxQuick: ['快速', 'QUICK'], fxOff: ['關閉', 'OFF'],
+  glow: ['光暈', 'GLOW'], glowLow: ['低・清晰', 'LOW · CRISP'], glowHigh: ['高', 'HIGH'],
   sound: ['音效', 'SOUND'], music: ['音樂', 'MUSIC'], haptics: ['震動', 'HAPTICS'], hints: ['提示落點', 'MOVE HINTS'], rotate2p: ['雙人時轉棋盤', 'ROTATE BOARD IN 2P'], on: ['開', 'ON'], off: ['關', 'OFF'],
   privacy: ['私隱政策', 'Privacy'],
   resetView: ['重設視角', 'Reset view'], resetViewShort: ['視角', 'VIEW'],

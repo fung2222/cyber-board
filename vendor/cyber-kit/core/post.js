@@ -4,9 +4,9 @@ import * as THREE from 'three';
 export const CyberShader = {
   name: 'CyberShader',
   uniforms: {
-    tDiffuse: { value: null }, uTime: { value: 0 }, uAberration: { value: 0.0025 }, uGlitch: { value: 0 },
+    tDiffuse: { value: null }, uTime: { value: 0 }, uAberration: { value: 0.0012 }, uGlitch: { value: 0 },
     uVignette: { value: 1.0 }, uFlash: { value: 0 }, uFlashColor: { value: new THREE.Color(1, 1, 1) }, uRes: { value: new THREE.Vector2(1, 1) },
-    uGrain: { value: 0.018 },
+    uGrain: { value: 0.012 },
   },
   vertexShader: /* glsl */`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */`

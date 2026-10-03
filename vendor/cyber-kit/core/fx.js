@@ -159,7 +159,7 @@ export class FxState {
   applyPost(stage, t) {
     const u = stage.cyberPass.uniforms;
     u.uTime.value = t;
-    u.uAberration.value = 0.0018 + this.aberr * 0.004;
+    u.uAberration.value = (stage.aberrBase ?? 0.0018) + this.aberr * (stage.glow === 'low' ? 0.0025 : 0.004);
     u.uGlitch.value = this.glitch;
     stage.bloomPass.strength = stage.bloomBase + this.aberr * 0.08;
   }

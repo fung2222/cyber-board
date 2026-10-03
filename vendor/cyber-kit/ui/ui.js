@@ -45,6 +45,25 @@ export class CyberUI {
   setText(id, v) { const e = typeof id === 'string' ? $(id) : id; if (e && e.textContent !== String(v)) e.textContent = v; }
   bump(el) { el = typeof el === 'string' ? $(el) : el; if (!el) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   setMuted(m) { if (this.el.mute) this.el.mute.classList.toggle('muted', !!m); }
+  /**
+   * v0.3.0: "GLOW: LOW / HIGH" button (shared preference, localStorage cyber.glow). Uses #btn-glow if the page has one,
+   * otherwise inserts a ghost neon button right after #<after> (default: the pause screen's resume button).
+   */
+  glowToggle(stage, { after = 'btn-resume', id = 'btn-glow', onChange = null } = {}) {
+    if (!stage || !stage.setGlow) return null;
+    let b = $(id);
+    if (!b) {
+      const ref = $(after); if (!ref) return null;
+      b = document.createElement('button'); b.id = id; b.type = 'button'; b.className = 'neon-btn ghost ck-glow-btn';
+      ref.insertAdjacentElement('afterend', b);
+    }
+    const paint = () => { b.textContent = t('kit.glow', { v: t(stage.glow === 'high' ? 'kit.glowHigh' : 'kit.glowLow') }); b.title = t('kit.glowHint'); b.dataset.glow = stage.glow; };
+    b.addEventListener('click', (ev) => { ev.stopPropagation(); stage.toggleGlow({ persist: true }); b.blur(); if (onChange) onChange(stage.glow); });
+    stage.onGlow(paint);
+    if (typeof window !== 'undefined') window.addEventListener('cyber:langchange', paint);
+    paint();
+    return b;
+  }
 
   /** floating score text at CSS pixel (x, y) */
   popup(x, y, text, sub = '', cls = '') {
