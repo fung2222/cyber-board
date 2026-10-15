@@ -214,11 +214,11 @@ html[data-lang="en"] .title, html[data-lang="en"] .title2, html[data-lang="en"] 
 html[data-lang="en"] .neon-btn span { letter-spacing: 3px; }
 html[data-lang="en"] .label, html[data-lang="en"] .tagline, html[data-lang="en"] .controls { letter-spacing: .5px; }
 
-/* ---- v0.3.6: unified home menu layout (hide start screen) ----
+/* ---- v0.3.7: unified home menu layout (force dismiss start) ----
    Top-left: Arcade Menu only. Top-right: lang (+ privacy/chips).
    Brand + primary CTA: true viewport centre (H+V). Meta: bottom, centre-aligned. */
 .menu-home {
-  display: flex !important;
+  display: flex; /* no !important — must yield to .hidden */
   flex-direction: column;
   align-items: stretch;
   justify-content: stretch !important;
@@ -232,10 +232,12 @@ html[data-lang="en"] .label, html[data-lang="en"] .tagline, html[data-lang="en"]
   touch-action: manipulation; /* taps on Start must fire; pan-y was swallowing clicks */
   /* keep .screen { position:fixed; inset:0 } — do NOT set relative (collapses height) */
 }
-/* MUST beat .menu-home { display:flex !important } when CyberUI adds .hidden */
+/* Dismiss start/home: must win over .menu-home { display:flex } */
+.hidden,
 .menu-home.hidden,
 #screen-start.hidden,
-.screen.menu-home.hidden {
+.screen.menu-home.hidden,
+.screen.hidden {
   display: none !important;
   pointer-events: none !important;
   visibility: hidden !important;
@@ -470,4 +472,14 @@ html[data-lang="en"] .label, html[data-lang="en"] .tagline, html[data-lang="en"]
   .menu-brand { margin-bottom: 10px; }
   .menu-meta .controls, .menu-meta .controls-hint { display: none; }
   .menu-mid { transform: translate(-50%, -46%); }
+}
+
+/* v0.3.7 start-screen dismiss — last in file so nothing re-flexes a .hidden screen */
+#screen-start.hidden,
+.menu-home.hidden,
+.screen.hidden {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }

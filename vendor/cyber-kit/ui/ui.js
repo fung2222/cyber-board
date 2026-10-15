@@ -32,7 +32,14 @@ export class CyberUI {
   /** show one screen by name (or null to hide all) */
   show(name) {
     this.current = name;
-    for (const k of this.screenNames) { const e = this.screen(k); if (e) e.classList.toggle('hidden', k !== name); }
+    for (const k of this.screenNames) {
+      const e = this.screen(k); if (!e) continue;
+      const on = k === name;
+      e.classList.toggle('hidden', !on);
+      // Inline !important beats any leftover .menu-home { display:flex !important } in cached CSS
+      if (on) e.style.removeProperty('display');
+      else e.style.setProperty('display', 'none', 'important');
+    }
   }
   hud(on) { if (this.el.hud) this.el.hud.classList.toggle('hidden', !on); }
   loaded(delay = 250) { setTimeout(() => this.el.loading && this.el.loading.classList.add('done'), delay); }
