@@ -163,3 +163,5 @@ body.battling .popup.big { font-size: 50px; }
   .bottombar { gap: 7px; }
   .roll { min-width: 104px; }
 }
+
+/* hub return */ #btn-arcade-menu { margin-top: 10px; animation: none; }

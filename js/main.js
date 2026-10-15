@@ -1,7 +1,7 @@
 // CYBER BOARD 賽博棋鬥 — app shell: stage / city / board, camera rig, menus, settings, endless tower, results,
 // rewarded helpers, demo autoplay, test hooks. Game rules live in js/rules, controllers in js/games.
 import * as THREE from 'three';
-import { flags, createStore, createStage, ThemeController, Particles, Shockwaves, FxState, NeonCity, CyberUI, Platform, createAds } from 'cyber-kit';
+import { flags, createStore, createStage, ThemeController, Particles, Shockwaves, FxState, NeonCity, CyberUI, Platform, createAds, readHub, returnToHub, shouldShowArcadeMenu } from 'cyber-kit';
 import { t, tOther, applyI18n, getLang, setLang, bindToggle, onLangChange } from './i18n.js';
 import './strings.js';
 import { BoardAudio } from './audio.js';
@@ -512,6 +512,10 @@ function nextDemo() {
 
 // ---------------------------------------------------------------- wiring
 bindToggle($('btn-lang'));
+const __hub = readHub();
+if (shouldShowArcadeMenu(__hub)) { const b = document.getElementById('btn-arcade-menu'); if (b) b.classList.remove('hidden'); }
+ui.on('btn-arcade-menu', () => { try { audio.back(); } catch {} returnToHub({ gameId: 'cyber-board', openStore: false }); });
+
 onLangChange(() => { relabel(); });
 function relabel() {
   applyI18n(); paintStart();
