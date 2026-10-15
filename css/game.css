@@ -8,8 +8,8 @@ body.playing .corner-btns { display: none; }
 .corner-btns #btn-mute svg { fill: var(--c1); }
 
 /* ---------- start screen ---------- */
-#screen-start { overflow-y: auto; }
-.game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 520px; margin: 4px 0 12px; }
+/* menu-home handles scroll */ #screen-start.menu-home { overflow-y: auto; }
+.game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 520px; margin: 0; }
 .gcard { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px 14px 12px 64px; min-height: 86px; text-align: left; cursor: pointer; pointer-events: auto; color: #fff;
   background: linear-gradient(135deg, rgba(14,6,40,.82), rgba(6,2,20,.6)); border: 1px solid color-mix(in srgb, var(--c1) 45%, transparent);
   box-shadow: 0 0 16px color-mix(in srgb, var(--c1) 22%, transparent), inset 0 0 18px color-mix(in srgb, var(--c2) 12%, transparent);
@@ -145,7 +145,8 @@ body.battling .popup.big { font-size: 50px; }
   .title { font-size: 46px; letter-spacing: 4px; }
   .title-en { letter-spacing: 7px !important; font-size: 14px !important; margin-bottom: 8px !important; }
   .tagline { font-size: 12.5px; margin-bottom: 10px; }
-  #screen-start { align-items: flex-start; padding-top: max(56px, env(safe-area-inset-top)); }
+  /* corner-btns occupy top-right; menu-home top bar handles left */
+  #screen-start.menu-home { align-items: stretch; padding-top: 0; }
   .game-grid { gap: 8px; }
   .gcard { padding: 10px 8px 9px 54px; min-height: 92px; }
   .gcard b { font-size: 16px; letter-spacing: 2px; }
@@ -164,4 +165,18 @@ body.battling .popup.big { font-size: 50px; }
   .roll { min-width: 104px; }
 }
 
-/* hub return */ #btn-arcade-menu { margin-top: 10px; animation: none; }
+/* hub return */ #btn-arcade-menu { margin-top: 0; animation: none; }
+
+/* menu-home: clear fixed corner-btns (lang/mute/settings) on the right */
+#screen-start.menu-home .menu-top {
+  padding-right: max(150px, calc(env(safe-area-inset-right) + 150px));
+}
+#screen-start.menu-home .menu-top-right { justify-content: flex-start; margin-left: 0; }
+@media (max-width: 760px) {
+  #screen-start.menu-home .menu-top {
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-top: max(56px, calc(env(safe-area-inset-top) + 48px)); /* below corner-btns row */
+  }
+  #screen-start.menu-home .menu-top-right { width: 100%; justify-content: center; order: 2; }
+  #screen-start.menu-home .menu-top-left { order: 3; }
+}
