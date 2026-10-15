@@ -171,12 +171,8 @@ body.battling .popup.big { font-size: 50px; }
 #screen-start.menu-home .menu-top {
   padding-right: max(150px, calc(env(safe-area-inset-right) + 150px));
 }
-#screen-start.menu-home .menu-top-right { justify-content: flex-start; margin-left: 0; }
 @media (max-width: 760px) {
   #screen-start.menu-home .menu-top {
-    padding-right: max(14px, env(safe-area-inset-right));
-    padding-top: max(56px, calc(env(safe-area-inset-top) + 48px)); /* below corner-btns row */
+    padding-right: max(150px, calc(env(safe-area-inset-right) + 150px));
   }
-  #screen-start.menu-home .menu-top-right { width: 100%; justify-content: center; order: 2; }
-  #screen-start.menu-home .menu-top-left { order: 3; }
 }
