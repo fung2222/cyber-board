@@ -214,7 +214,7 @@ html[data-lang="en"] .title, html[data-lang="en"] .title2, html[data-lang="en"] 
 html[data-lang="en"] .neon-btn span { letter-spacing: 3px; }
 html[data-lang="en"] .label, html[data-lang="en"] .tagline, html[data-lang="en"] .controls { letter-spacing: .5px; }
 
-/* ---- v0.3.5: unified home menu layout (pointer-events fix) ----
+/* ---- v0.3.6: unified home menu layout (hide start screen) ----
    Top-left: Arcade Menu only. Top-right: lang (+ privacy/chips).
    Brand + primary CTA: true viewport centre (H+V). Meta: bottom, centre-aligned. */
 .menu-home {
@@ -231,6 +231,14 @@ html[data-lang="en"] .label, html[data-lang="en"] .tagline, html[data-lang="en"]
   -webkit-overflow-scrolling: touch;
   touch-action: manipulation; /* taps on Start must fire; pan-y was swallowing clicks */
   /* keep .screen { position:fixed; inset:0 } — do NOT set relative (collapses height) */
+}
+/* MUST beat .menu-home { display:flex !important } when CyberUI adds .hidden */
+.menu-home.hidden,
+#screen-start.hidden,
+.screen.menu-home.hidden {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
 .menu-top {
   position: absolute;
