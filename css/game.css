@@ -167,12 +167,15 @@ body.battling .popup.big { font-size: 50px; }
 
 /* hub return */ #btn-arcade-menu { margin-top: 0; animation: none; }
 
-/* menu-home: clear fixed corner-btns (lang/mute/settings) on the right */
-#screen-start.menu-home .menu-top {
-  padding-right: max(150px, calc(env(safe-area-inset-right) + 150px));
+/* Home: only house | book+gear — hide legacy corner lang/mute/settings junk */
+body:has(#screen-start:not(.hidden)) #corner-btns {
+  display: none !important;
 }
-@media (max-width: 760px) {
-  #screen-start.menu-home .menu-top {
-    padding-right: max(150px, calc(env(safe-area-inset-right) + 150px));
-  }
+/* chips live in .menu-meta now */
+.menu-home .menu-meta .menu-chip {
+  pointer-events: none;
+  margin-bottom: 4px;
+}
+.menu-home .menu-top {
+  padding-right: max(14px, env(safe-area-inset-right));
 }
