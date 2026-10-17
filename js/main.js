@@ -167,8 +167,23 @@ function updateCamera(dt, now) {
   let offY = cam.offY, offX = 0;
   if (playing) rigPose(viewC, cam.pos, cam.look);
   else {
-    cam.menuT += dt; let yaw = cam.menuT * 0.08, dist = cam.dist * 1.08; const pitch = cam.pitch - 0.12;
-    offY = -stage.height * (stage.height > stage.width ? 0.24 : 0.06); if (stage.width > stage.height * 1.2) { offX = -stage.width * 0.2; dist *= 1.12; }
+    // Attract/home only: park the 3D board in the MID breathing gap (between brand top + Start CTA).
+    // Other non-play screens keep the prior lower-right framing.
+    cam.menuT += dt;
+    const portrait = stage.height > stage.width, wide = stage.width > stage.height * 1.2, home = S.state === 'menu';
+    let yaw = cam.menuT * 0.08, dist = cam.dist * 1.08, pitch = cam.pitch - 0.12;
+    if (home) {
+      // Pull back so projected board ≈ mid-gap height (mobile ~38%, desktop ~23% → ~5× fit dist).
+      dist = cam.dist * (portrait ? 2.2 : 5.2);
+      pitch = cam.pitch - (portrait ? 0.02 : 0.03);
+      // Mid-gap centres ≈ 49% (mobile) / 55% (desktop).
+      const midC = portrait ? 0.49 : 0.52;  // desktop: sit a touch higher in the narrow mid gap
+      offY = stage.height * (0.50 - midC) * 1.4;
+      offX = (!portrait && wide) ? -stage.width * 0.03 : 0;   // mild right bias under desktop hero wash
+    } else {
+      offY = -stage.height * (portrait ? 0.24 : 0.06);
+      if (wide) { offX = -stage.width * 0.2; dist *= 1.12; }
+    }
     cam.pos.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist, Math.cos(yaw) * Math.cos(pitch) * dist); cam.look.set(0, 0, 0);
   }
   const w = battle.camW;
