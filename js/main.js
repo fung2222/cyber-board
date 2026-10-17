@@ -514,6 +514,7 @@ function nextDemo() {
 bindToggle($('btn-lang'));
 
 ui.mountHowto({
+  privacyUrl: './privacy.html',
   onOpen: () => { try { audio && audio.click && audio.click(); } catch (_) {} },
   getContent: () => ({
     kicker: 'CYBER BOARD',
@@ -524,6 +525,12 @@ ui.mountHowto({
     ],
   }),
 });
+ui.mountSettings({
+  audio, stage,
+  open: () => { try { openSettings(); } catch (_) {} },
+  onOpen: () => { try { audio && audio.click && audio.click(); } catch (_) {} },
+});
+
 
 const __hub = readHub();
 if (shouldShowArcadeMenu(__hub)) { const b = document.getElementById('btn-arcade-menu'); if (b) b.classList.remove('hidden'); }
