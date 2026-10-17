@@ -357,13 +357,18 @@ function paintStart() {
   ui.setText('chips', chips);
   document.querySelectorAll('[data-best]').forEach((e) => { const tw = towers[e.dataset.best]; e.textContent = tw.best ? t('bestFloor', { n: tw.best }) : t('noFloor'); });
 }
-function openMode(game) {
-  audio.click(); S.state = 'mode'; previewBoard(game); ui.show('mode');
+/** Refresh mode-screen labels without showing the screen (safe during settings). */
+function paintModeLabels(game = S.game) {
+  if (!game) return;
   $('screen-mode').classList.toggle('sky', game === 'sky');
   const title = $('mode-title'); title.textContent = t('g.' + game); title.dataset.text = t('g.' + game);
   ui.setText('mode-kicker', tOther('g.' + game)); ui.setText('mode-rules', t('rules.' + game));
   const tw = towers[game]; ui.setText('endless-sub', t('endlessSub', { n: tw.floor, b: tw.best }));
   paintModeOpts();
+}
+function openMode(game) {
+  audio.click(); S.state = 'mode'; previewBoard(game); ui.show('mode');
+  paintModeLabels(game);
 }
 function charPool() { return CHARACTERS.filter((c) => !c.boss || bestOverall() >= MILESTONE); }
 function paintModeOpts() {
@@ -502,11 +507,30 @@ function resume() { if (S.state !== 'paused') return; S.state = 'play'; ui.show(
 
 // ---------------------------------------------------------------- settings screen
 let settingsFrom = null;
-function openSettings() { audio.init(); audio.click(); settingsFrom = S.state === 'paused' ? 'pause' : ui.current || 'start'; ui.show('settings'); paintSettings(); }
-function closeSettings() { audio.back(); ui.show(settingsFrom === 'pause' ? 'pause' : settingsFrom || 'start'); if (settingsFrom === 'start') paintStart(); if (settingsFrom === 'mode') paintModeOpts(); }
+function openSettings() {
+  audio.init(); audio.click();
+  if (S.state !== 'settings') {
+    settingsFrom = S.state === 'paused' ? 'pause' : S.state === 'mode' ? 'mode' : (ui.current || 'start');
+  }
+  S.state = 'settings';
+  ui.show('settings');
+  paintSettings();
+}
+function closeSettings() {
+  audio.back();
+  const back = settingsFrom || 'start';
+  if (back === 'pause') { S.state = 'paused'; ui.show('pause'); }
+  else if (back === 'mode') { S.state = 'mode'; ui.show('mode'); paintModeLabels(S.game); }
+  else { S.state = 'menu'; ui.show('start'); paintStart(); }
+}
 function paintSettings() {
   segSelect('set-lang', getLang()); segSelect('set-fx', settings.fx); segSelect('set-glow', stage.glow); segSelect('set-sound', audio.muted ? 0 : 1); segSelect('set-music', settings.music ? 1 : 0);
   segSelect('set-haptics', settings.haptics ? 1 : 0); segSelect('set-hints', settings.hints ? 1 : 0); segSelect('set-rotate', settings.rotate ? 1 : 0);
+  const vol = $('set-vol');
+  if (vol) {
+    const vols = (typeof audio.getVolumes === 'function' ? audio.getVolumes() : null) || { master: audio.volume ?? 1 };
+    vol.value = String(Math.round((vols.master ?? 1) * 100));
+  }
   const sk = $('set-skin'); sk.innerHTML = '';
   SKINS.forEach((s, i) => {
     const b = document.createElement('button'); const locked = bestOverall() < s.at; b.disabled = locked;
@@ -554,8 +578,12 @@ ui.on('btn-arcade-menu', () => { try { audio.back(); } catch {} returnToHub({ ga
 onLangChange(() => { relabel(); });
 function relabel() {
   applyI18n(); paintStart();
-  if (S.state === 'mode') openMode(S.game);
-  if (S.state === 'settings' || ui.current === 'settings') paintSettings();
+  if (S.state === 'settings') {
+    paintSettings();
+    if (settingsFrom === 'mode') paintModeLabels(S.game);
+  } else if (S.state === 'mode') {
+    paintModeLabels(S.game);
+  }
   if (S.ctrl && S.ctrl.refreshHud && (S.state === 'play' || S.state === 'paused')) S.ctrl.refreshHud();
   if (S.state === 'play' && S.ctrl && S.ctrl.humanTurn && S.ctrl.humanTurn() && !S.ctrl.busy) app.setStatus(t('yourTurn'));
 }
@@ -574,6 +602,10 @@ bindSeg('set-fx', (v) => { settings.fx = v; store.set('fx', v); paintSettings();
 // shared CYBER glow preference (bloom applies now; piece / board materials on the next board build)
 bindSeg('set-glow', (v) => { stage.setGlow(v, { persist: true }); paintSettings(); });
 bindSeg('set-sound', (v) => { audio.setMuted(v === '0'); ui.setMuted(audio.muted); paintSettings(); });
+$('set-vol')?.addEventListener('input', () => {
+  try { audio.init(); } catch (_) {}
+  audio.setVolume((+$('set-vol').value || 0) / 100, 'master');
+});
 bindSeg('set-music', (v) => { settings.music = v === '1'; store.setBool('music', settings.music); audio.setMusic(settings.music); paintSettings(); });
 bindSeg('set-haptics', (v) => { settings.haptics = v === '1'; store.setBool('haptics', settings.haptics); Platform.setHaptics(settings.haptics); paintSettings(); });
 bindSeg('set-hints', (v) => { settings.hints = v === '1'; store.setBool('hints', settings.hints); paintSettings(); });

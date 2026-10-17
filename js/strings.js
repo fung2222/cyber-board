@@ -1,7 +1,7 @@
 // zh-HK / English strings for CYBER BOARD (registered with the local i18n layer).
 import { addStrings } from './i18n.js';
 addStrings({
-  title: ['賽博棋鬥', 'CYBER BOARD'], kicker: ['霓虹九龍 · 四合一棋盤對戰', 'NEON KOWLOON · 4-IN-1 BOARD BATTLES'],
+  title: ['賽博棋鬥', 'CYBER BOARD'], titleEn: ['CYBER BOARD', '賽博棋鬥'], kicker: ['霓虹九龍 · 四合一棋盤對戰', 'NEON KOWLOON · 4-IN-1 BOARD BATTLES'],
   tagline: ['四款經典棋盤遊戲，食子即開打！每次吃子都會觸發 3D 霓虹對決動畫。', 'Four classic board games — every capture triggers a 3D neon battle cinematic.'],
   pickGame: ['揀遊戲', 'CHOOSE A GAME'],
   'g.chess': ['國際象棋', 'CHESS'], 'g.chess.sub': ['王車易位・吃過路兵・升變', 'castling · en passant · promotion'],
@@ -17,7 +17,7 @@ addStrings({
   back: ['返回', 'BACK'], start: ['開始', 'START'], settings: ['設定', 'SETTINGS'], close: ['關閉', 'CLOSE'],
   language: ['語言', 'LANGUAGE'], battleFx: ['吃子對決動畫', 'CAPTURE BATTLES'], fxFull: ['完整', 'FULL'], fxQuick: ['快速', 'QUICK'], fxOff: ['關閉', 'OFF'],
   glow: ['光暈', 'GLOW'], glowLow: ['低・清晰', 'LOW · CRISP'], glowHigh: ['高', 'HIGH'],
-  sound: ['音效', 'SOUND'], music: ['音樂', 'MUSIC'], haptics: ['震動', 'HAPTICS'], hints: ['提示落點', 'MOVE HINTS'], rotate2p: ['雙人時轉棋盤', 'ROTATE BOARD IN 2P'], on: ['開', 'ON'], off: ['關', 'OFF'],
+  sound: ['音效', 'SOUND'], volume: ['音量', 'VOLUME'], music: ['音樂', 'MUSIC'], haptics: ['震動', 'HAPTICS'], hints: ['提示落點', 'MOVE HINTS'], rotate2p: ['雙人時轉棋盤', 'ROTATE BOARD IN 2P'], on: ['開', 'ON'], off: ['關', 'OFF'],
   privacy: ['私隱政策', 'Privacy'],
   resetView: ['重設視角', 'Reset view'], resetViewShort: ['視角', 'VIEW'],
   viewTip: ['雙指縮放 · 單指拖動旋轉', 'Pinch to zoom · drag to rotate'],
@@ -57,6 +57,6 @@ addStrings({
   score: ['比數', 'SCORE'], 'st.captures': ['吃子', 'CAPTURES'], 'st.moves': ['回合', 'MOVES'], 'st.discs': ['你嘅棋子', 'YOUR DISCS'], 'st.chain': ['最長連翻', 'BEST CHAIN'],
   'st.corners': ['佔角', 'CORNERS'], 'st.kills': ['擊落', 'SHOT DOWN'], 'st.lost': ['被擊落', 'LOST'],
 
-  'help.rules': ['<ul><li>四合一棋盤館：國際象棋、象棋、黑白棋、飛行棋。</li><li>同 AI 對弈；可調難度／外觀。</li><li>每種棋用返經典規則（詳見遊戲內規則文案）。</li></ul>', '<ul><li>Four board classics: Chess, Xiangqi, Reversi, Ludo/Sky Jets.</li><li>Play vs AI; tune difficulty / skins.</li><li>Each mode uses its classic rules (see in-game rules copy).</li></ul>'],
-  'help.controls': ['<ul><li>撳棋子／格仔行棋；有悔棋同提示（視模式）</li><li>設定掣調難度／皮膚 · 語言掣切換中英</li><li>暫停／返回用畫面掣</li></ul>', '<ul><li>Tap pieces/cells to move; undo/hints depend on mode</li><li>Settings for difficulty/skins · language toggle</li><li>Pause / back via on-screen buttons</li></ul>'],
+  'help.rules': ['<ul><li>四合一棋盤館：國際象棋、象棋、黑白棋、飛行棋。</li><li>每次吃子都會觸發可跳過嘅 3D 霓虹對決動畫。</li><li>每種棋都有<strong>無盡之塔</strong>：一層接一層，難度同目標會升。</li><li>同 AI 對弈（可調難度）或雙人同機；齒輪設定調外觀／音效。</li><li>每種棋用返經典規則（詳見揀棋後嘅規則文案）。</li></ul>', '<ul><li>Four board classics: Chess, Xiangqi, Reversi, Ludo/Sky Jets.</li><li>Every capture fires a skippable 3D neon battle cinematic.</li><li>Each game has an <strong>endless tower</strong> — floors forever, rising difficulty and objectives.</li><li>Play vs AI (tunable difficulty) or local 2P; gear settings for skins / audio.</li><li>Classic rules per mode (see the rules blurb after you pick a game).</li></ul>'],
+  'help.controls': ['<ul><li>撳棋子／格仔行棋；有悔棋同提示（視模式）</li><li>主畫面右上<strong>齒輪</strong>：語言、音量、吃子動畫、光暈、皮膚等</li><li>主畫面<strong>書本</strong>掣睇玩法同私隱</li><li>暫停／返回用畫面掣；雙指縮放・拖動旋轉視角</li></ul>', '<ul><li>Tap pieces/cells to move; undo/hints depend on mode</li><li>Home <strong>gear</strong>: language, volume, capture FX, glow, skins, and more</li><li>Home <strong>book</strong> icon for how-to and privacy</li><li>Pause / back via on-screen buttons; pinch zoom · drag to rotate the view</li></ul>'],
 });

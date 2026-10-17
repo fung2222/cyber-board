@@ -9,7 +9,6 @@
 <title>賽博棋鬥 CYBER BOARD · 4-in-1 3D board battles</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%2305010f%22/%3E%3Cpath d=%22M4 4h12v12H4zM16 16h12v12H16z%22 fill=%22%2300e5ff%22 opacity=%22.35%22/%3E%3Cpath d=%22M16 7a3 3 0 1 1 0 .1M12 24h8l-1.5-9h-5z%22 fill=%22none%22 stroke=%22%23ff2bd6%22 stroke-width=%222%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./vendor/cyber-kit/ui/hud.css?v=0.3.15">
-">
 <link rel="stylesheet" href="./css/game.css?v=0.3.15">
 <script type="importmap">
 {
@@ -75,8 +74,8 @@
     <div class="menu-mid">
       <div class="menu-brand">
       <div class="kicker" data-i18n="kicker"></div>
-      <h1 class="title glitch" data-text="賽博棋鬥">賽博棋鬥</h1>
-      <div class="title-en">CYBER BOARD</div>
+      <h1 class="title glitch" data-text="賽博棋鬥" data-i18n="title">賽博棋鬥</h1>
+      <div class="title-en" data-i18n="titleEn"></div>
       <p class="tagline" data-i18n="tagline"></p>
     </div>
       <div class="menu-cta">
@@ -124,6 +123,7 @@
     <div class="opt-row"><label data-i18n="battleFx"></label><div class="seg" id="set-fx"><button data-v="full" data-i18n="fxFull"></button><button data-v="quick" data-i18n="fxQuick"></button><button data-v="off" data-i18n="fxOff"></button></div></div>
     <div class="opt-row"><label data-i18n="glow"></label><div class="seg" id="set-glow"><button data-v="low" data-i18n="glowLow"></button><button data-v="high" data-i18n="glowHigh"></button></div></div>
     <div class="opt-row"><label data-i18n="sound"></label><div class="seg" id="set-sound"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
+    <div class="opt-row"><label data-i18n="volume"></label><input type="range" id="set-vol" class="ck-slider" min="0" max="100" step="1" value="100" aria-label="Volume"/></div>
     <div class="opt-row"><label data-i18n="music"></label><div class="seg" id="set-music"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
     <div class="opt-row"><label data-i18n="haptics"></label><div class="seg" id="set-haptics"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
     <div class="opt-row"><label data-i18n="hints"></label><div class="seg" id="set-hints"><button data-v="1" data-i18n="on"></button><button data-v="0" data-i18n="off"></button></div></div>
@@ -163,7 +163,7 @@
   </div>
 </div>
 
-<div id="loading" class="loading"><div class="ld-text">CYBER BOARD · 棋盤啟動中…</div></div>
+<div id="loading" class="loading"><div class="ld-text" data-i18n="loading">棋盤啟動中…</div></div>
 <script type="module" src="./js/main.js"></script>
 </body>
 </html>
