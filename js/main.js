@@ -512,6 +512,19 @@ function nextDemo() {
 
 // ---------------------------------------------------------------- wiring
 bindToggle($('btn-lang'));
+
+ui.mountHowto({
+  onOpen: () => { try { audio && audio.click && audio.click(); } catch (_) {} },
+  getContent: () => ({
+    kicker: 'CYBER BOARD',
+    title: t('kit.howto'),
+    sections: [
+      { heading: t('kit.rules'), body: t('help.rules') },
+      { heading: t('kit.controls'), body: t('help.controls') },
+    ],
+  }),
+});
+
 const __hub = readHub();
 if (shouldShowArcadeMenu(__hub)) { const b = document.getElementById('btn-arcade-menu'); if (b) b.classList.remove('hidden'); }
 ui.on('btn-arcade-menu', () => { try { audio.back(); } catch {} returnToHub({ gameId: 'cyber-board', openStore: false }); });

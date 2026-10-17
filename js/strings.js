@@ -56,4 +56,7 @@ addStrings({
   loading: ['棋盤啟動中…', 'BOOTING THE BOARD…'],
   score: ['比數', 'SCORE'], 'st.captures': ['吃子', 'CAPTURES'], 'st.moves': ['回合', 'MOVES'], 'st.discs': ['你嘅棋子', 'YOUR DISCS'], 'st.chain': ['最長連翻', 'BEST CHAIN'],
   'st.corners': ['佔角', 'CORNERS'], 'st.kills': ['擊落', 'SHOT DOWN'], 'st.lost': ['被擊落', 'LOST'],
+
+  'help.rules': ['<ul><li>四合一棋盤館：國際象棋、象棋、黑白棋、飛行棋。</li><li>同 AI 對弈；可調難度／外觀。</li><li>每種棋用返經典規則（詳見遊戲內規則文案）。</li></ul>', '<ul><li>Four board classics: Chess, Xiangqi, Reversi, Ludo/Sky Jets.</li><li>Play vs AI; tune difficulty / skins.</li><li>Each mode uses its classic rules (see in-game rules copy).</li></ul>'],
+  'help.controls': ['<ul><li>撳棋子／格仔行棋；有悔棋同提示（視模式）</li><li>設定掣調難度／皮膚 · 語言掣切換中英</li><li>暫停／返回用畫面掣</li></ul>', '<ul><li>Tap pieces/cells to move; undo/hints depend on mode</li><li>Settings for difficulty/skins · language toggle</li><li>Pause / back via on-screen buttons</li></ul>'],
 });

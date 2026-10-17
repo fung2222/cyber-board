@@ -140,6 +140,95 @@ export class CyberUI {
     });
   }
   /** true while a confirm() modal is open; closeModal() cancels it (e.g. Android back button) */
+
+  /**
+   * Bilingual How-to / Controls modal (scrollable). Content should already be translated via t().
+   * @param {{title?:string, kicker?:string, sections:{heading:string, body:string}[], closeLabel?:string, closeSmall?:string}} o
+   * body may contain safe HTML (<br>, <kbd>, <b>, <ul><li>).
+   */
+  howto(o = {}) {
+    return new Promise((resolve) => {
+      const m = document.createElement('div');
+      m.className = 'screen ck-modal ck-howto';
+      m.setAttribute('role', 'dialog');
+      m.setAttribute('aria-modal', 'true');
+      const sections = (o.sections || []).map((s) => {
+        const h = document.createElement('div');
+        h.className = 'ck-howto-sec';
+        const title = document.createElement('h3');
+        title.className = 'ck-howto-h';
+        title.textContent = s.heading || '';
+        const body = document.createElement('div');
+        body.className = 'ck-howto-body';
+        body.innerHTML = s.body || '';
+        h.appendChild(title); h.appendChild(body);
+        return h.outerHTML;
+      }).join('');
+      m.innerHTML = `<div class="panel ck-howto-panel">
+        ${o.kicker ? '<div class="kicker ck-howto-kicker"></div>' : ''}
+        <h2 class="title2 ck-howto-title"></h2>
+        <div class="ck-howto-scroll">${sections}</div>
+        <button type="button" class="neon-btn" data-ok><span></span><small></small></button>
+      </div>`;
+      if (o.kicker) m.querySelector('.ck-howto-kicker').textContent = o.kicker;
+      m.querySelector('.ck-howto-title').textContent = o.title || t('kit.howto');
+      const ok = m.querySelector('[data-ok]');
+      ok.querySelector('span').textContent = o.closeLabel || t('kit.howtoClose');
+      ok.querySelector('small').textContent = o.closeSmall ?? t('kit.howtoCloseS');
+      const done = () => { m.remove(); this._modal = null; resolve(true); };
+      ok.addEventListener('click', (e) => { e.stopPropagation(); done(); });
+      m.addEventListener('click', (e) => { if (e.target === m) done(); });
+      this._modal = { close: () => done() };
+      document.body.appendChild(m);
+      ok.focus({ preventScroll: true });
+    });
+  }
+
+  /**
+   * Mount a How-to button on the home menu (menu-top-right, before privacy/lang).
+   * Preserves Arcade Menu top-left and EN/lang layout.
+   * @param {{getContent:()=>{title?:string,kicker?:string,sections:{heading:string,body:string}[]}, id?:string, onOpen?:Function}} o
+   */
+  mountHowto(o = {}) {
+    if (!o.getContent) return null;
+    const id = o.id || 'btn-howto';
+    let b = $(id);
+    if (!b) {
+      b = document.createElement('button');
+      b.type = 'button'; b.id = id; b.className = 'menu-howto';
+      b.innerHTML = '<span data-i18n="kit.howto"></span>';
+      const right = document.querySelector('.menu-home .menu-top-right') || document.querySelector('.menu-top-right');
+      if (right) {
+        const priv = right.querySelector('.menu-privacy, a.menu-privacy');
+        if (priv) right.insertBefore(b, priv);
+        else {
+          const lang = right.querySelector('.lang-btn, #btn-lang');
+          if (lang) right.insertBefore(b, lang);
+          else right.prepend(b);
+        }
+      } else {
+        document.body.appendChild(b);
+      }
+    }
+    const paint = () => {
+      const span = b.querySelector('[data-i18n]') || b;
+      if (span.dataset && span.dataset.i18n) span.textContent = t(span.dataset.i18n);
+      else if (!b.querySelector('span')) b.textContent = t('kit.howto');
+      b.setAttribute('aria-label', t('kit.howto'));
+      b.title = t('kit.howto');
+    };
+    paint();
+    if (typeof window !== 'undefined') window.addEventListener('cyber:langchange', paint);
+    b.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      b.blur();
+      if (o.onOpen) try { o.onOpen(); } catch (_) {}
+      const content = o.getContent() || {};
+      this.howto(content);
+    });
+    return b;
+  }
+
   get modalOpen() { return !!this._modal; }
   closeModal() { if (this._modal) { this._modal.close(); return true; } return false; }
 }
