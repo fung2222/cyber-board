@@ -173,11 +173,11 @@ function updateCamera(dt, now) {
     const portrait = stage.height > stage.width, wide = stage.width > stage.height * 1.2, home = S.state === 'menu';
     let yaw = cam.menuT * 0.08, dist = cam.dist * 1.08, pitch = cam.pitch - 0.12;
     if (home) {
-      // Pull back so projected board ≈ mid-gap height (mobile ~38%, desktop ~23% → ~5× fit dist).
-      dist = cam.dist * (portrait ? 2.2 : 5.2);
+      // ~2× prior mid size: closer camera, still inside mid breathing gap (mobile ~38%, desktop ~23%).
+      dist = cam.dist * (portrait ? 1.15 : 2.7);
       pitch = cam.pitch - (portrait ? 0.02 : 0.03);
       // Mid-gap centres ≈ 49% (mobile) / 55% (desktop).
-      const midC = portrait ? 0.49 : 0.52;  // desktop: sit a touch higher in the narrow mid gap
+      const midC = portrait ? 0.49 : 0.55;
       offY = stage.height * (0.50 - midC) * 1.4;
       offX = (!portrait && wide) ? -stage.width * 0.03 : 0;   // mild right bias under desktop hero wash
     } else {
