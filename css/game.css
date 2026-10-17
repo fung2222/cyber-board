@@ -1,8 +1,7 @@
 /* CYBER BOARD HUD + screens on top of cyber-kit/ui/hud.css */
 :root { --me: #00e5ff; --foe: #ff2bd6; }
 button { font-family: inherit; }
-.corner-btns { position: fixed; z-index: 12; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: flex; gap: 8px; }
-body.playing .corner-btns { display: none; }
+.corner-btns { position: fixed; z-index: 12; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: none; gap: 8px; }
 .lang-btn { font-family: 'Orbitron', var(--font-zh); font-weight: 900; font-size: 13px; color: var(--c1); letter-spacing: 1px; padding: 0; text-shadow: 0 0 6px var(--c1); }
 .corner-btns .icon-btn svg { fill: none; stroke-width: 1.8; }
 .corner-btns #btn-mute svg { fill: var(--c1); }
@@ -145,7 +144,6 @@ body.battling .popup.big { font-size: 50px; }
   .title { font-size: 46px; letter-spacing: 4px; }
   .title-en { letter-spacing: 7px !important; font-size: 14px !important; margin-bottom: 8px !important; }
   .tagline { font-size: 12.5px; margin-bottom: 10px; }
-  /* corner-btns occupy top-right; menu-home top bar handles left */
   #screen-start.menu-home { align-items: stretch; padding-top: 0; }
   .game-grid { gap: 8px; }
   .gcard { padding: 10px 8px 9px 54px; min-height: 92px; }
@@ -167,8 +165,10 @@ body.battling .popup.big { font-size: 50px; }
 
 /* hub return */ #btn-arcade-menu { margin-top: 0; animation: none; }
 
-/* Home: only house | book+gear — hide legacy corner lang/mute/settings junk */
-body:has(#screen-start:not(.hidden)) #corner-btns {
+/* Top chrome only on #screen-start / .menu-home (kit house|book|gear).
+   Legacy #corner-btns (EN / mute / gear) must NEVER show on mode/play/pause/result. */
+#corner-btns,
+.corner-btns {
   display: none !important;
 }
 /* chips live in .menu-meta now */
