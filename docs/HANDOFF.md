@@ -144,6 +144,7 @@ js/games/skygame.js   sky race controller
 js/rules/*.js         rules engines (see §2)            js/ai/*.js   AI (see §3)
 tests/rules.test.mjs  node unit tests (82)             tests/smoke.py  headless Chrome smoke test → docs/shots/
 tests/view.test.mjs   camera clamp/damp maths (19)     tests/view.py   CDP-touch camera / tap test → docs/shots/
+tests/layout.py       390px start-title / card layout guard
 privacy.html          bilingual privacy policy (noindex)
 ```
 Controller interface (all three): `start(cfg)`, `tap(worldPoint)`, `update(dt,t,frozen)`, `dispose()`, `canUndo()/undo()`, `hint()`,
@@ -164,6 +165,7 @@ spec (endless floor), players, planes, humans}`. Controllers talk to the shell o
   fails on any console error. SwiftShader runs at 2–4 FPS so it takes ~8–10 min. It writes PNGs; the committed
   `docs/shots/*.jpg` are the same shots converted to JPEG (q84) to keep the repo small.
 * Before/after on a 412×915 phone: `docs/shots/mob_view_before_after.jpg` (v1.0 · v1.1 default · v1.1 pinched in).
+* `python tests/layout.py [url]` — 390px start screen: title fits without clipping, four game cards inside 390×844, zero console errors.
 * `node tests/view.test.mjs` → **30/30** (clamps at every limit for three base pitches, pan scaling, damping convergence /
   smoothness / frame-rate independence, and the `ViewInput` classifier driven with synthetic pointer events: tap ≤ 14 px,
   horizontal / vertical one-finger drag → azimuth / tilt with no tap, tap blocked right after a drag and allowed after
@@ -192,7 +194,7 @@ spec (endless floor), players, planes, humans}`. Controllers talk to the shell o
   floor instead of the checkpoint, once), **undo** and **hint** in endless after the free one per floor. Casual / 2P = free.
 
 ## 9. cyber-kit
-Built against **cyber-kit v0.2.1** (tag exists; v0.2.0 + patch: i18n + endless helpers), vendored via `git archive v0.2.1`
+Built against **cyber-kit v0.3.19** (vendored), with i18n + endless helpers.
 (README/docs/examples/tests stripped). The game's `js/i18n.js` re-exports the kit i18n and only adds `tOther` + `[data-i18n-alt]`.
 `endlessCurve` is not used because the tower has its own deterministic `strengthOf` with the same saturating shape.
 
