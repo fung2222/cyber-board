@@ -87,7 +87,7 @@ def cell_px(pg):
 
 def mobile(p):
     print('== mobile 412x915 (CDP touch)', flush=True)
-    b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=ARGS)
+    b = p.chromium.launch(args=ARGS)
     pg, errs = new_page(b, 412, 915, True); T = Touch(pg)
     L = pg.evaluate('__board.view().limits')
     # ---- CHESS vs AI
@@ -251,7 +251,7 @@ def mobile(p):
 
 def desktop(p):
     print('== desktop 1280x800 (mouse + wheel)', flush=True)
-    b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=ARGS)
+    b = p.chromium.launch(args=ARGS)
     pg, errs = new_page(b, 1280, 800, False)
     L = pg.evaluate('__board.view().limits')
     pg.evaluate('__board.vsAi("chess", 1)'); time.sleep(3); idle(pg); settle(pg)

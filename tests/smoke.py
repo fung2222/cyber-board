@@ -43,7 +43,7 @@ def mv(pg, a, b, promo=None):
 
 def run(p, tag, vw, vh, mobile):
     print(f'== {tag} {vw}x{vh}')
-    b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=ARGS)
+    b = p.chromium.launch(args=ARGS)
     ctx = b.new_context(viewport={'width': vw, 'height': vh}, device_scale_factor=1, has_touch=mobile, is_mobile=mobile)
     pg = ctx.new_page(); errs = []
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
@@ -132,7 +132,7 @@ def run(p, tag, vw, vh, mobile):
 
 def demo(p):
     print('== demo autoplay')
-    b = p.chromium.launch(executable_path='/usr/bin/google-chrome', args=ARGS)
+    b = p.chromium.launch(args=ARGS)
     pg = b.new_page(viewport={'width': 1280, 'height': 800}); errs = []
     pg.on('console', lambda m: errs.append(m.text) if m.type == 'error' else None)
     pg.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
