@@ -12,7 +12,7 @@ export { SynthAudio, MUSIC, mtof, dbToGain, volumeToGain, loadVolumes, LOUDNESS,
 export { createInput, DEFAULT_KEYS, DEFAULT_ACTIONS } from './input/input.js';
 export { ViewInput, VIEW_LIMITS, GESTURE, TAP, defaultView, clampView, dampView, isDefaultView } from './input/view.js';
 export { CyberUI } from './ui/ui.js';
-export { showGameLoading, bindStartLoading } from './ui/game-loading.js';
+export { showGameLoading, bindStartLoading } from './ui/game-loading.js?v=0.3.21';
 export { STR, t2 } from './ui/strings.js';
 export { i18n, t, tBoth, addStrings, setLang, getLang, isZh, toggleLang, onLangChange, applyI18n, bindToggle, detectLang, LANGS, LANG_KEY } from './core/i18n.js';
 export { endlessCurve, milestoneOf } from './core/endless.js';

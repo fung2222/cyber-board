@@ -3,7 +3,7 @@
 // Importing this module is enough for a game; hub can call showGameLoading() directly.
 
 const STYLE = `
-#ck-game-loading{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,rgba(0,229,255,.10),rgba(5,1,15,.86) 58%,rgba(5,1,15,.96));opacity:1;pointer-events:auto;transition:opacity .32s ease}
+#ck-game-loading{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,rgba(5,1,15,.78) 0%,rgba(5,1,15,.92) 55%,rgba(5,1,15,.97) 100%);backdrop-filter:blur(14px) saturate(.72);-webkit-backdrop-filter:blur(14px) saturate(.72);opacity:1;pointer-events:auto;transition:opacity .32s ease}
 #ck-game-loading.hidden{display:none!important}
 #ck-game-loading.out{opacity:0}
 #ck-game-loading .ck-gl-core{position:relative;width:178px;height:178px;display:grid;place-items:center}
