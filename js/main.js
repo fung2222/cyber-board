@@ -1,7 +1,7 @@
 // CYBER BOARD 賽博棋鬥 — app shell: stage / city / board, camera rig, menus, settings, endless tower, results,
 // rewarded helpers, demo autoplay, test hooks. Game rules live in js/rules, controllers in js/games.
 import * as THREE from 'three';
-import { flags, createStore, createStage, ThemeController, Particles, Shockwaves, FxState, NeonCity, CyberUI, Platform, createAds, readHub, returnToHub, shouldShowArcadeMenu } from 'cyber-kit';
+import { flags, createStore, createStage, ThemeController, Particles, Shockwaves, FxState, NeonCity, CyberUI, Platform, createAds, readHub, returnToHub, shouldShowArcadeMenu, bindStartLoading } from 'cyber-kit';
 import { t, tOther, applyI18n, getLang, setLang, bindToggle, onLangChange } from './i18n.js';
 import './strings.js';
 import { BoardAudio } from './audio.js';
@@ -19,6 +19,7 @@ import { ViewInput, VIEW_LIMITS, defaultView, clampView, dampView, isDefaultView
 
 const GAME_ID = 'cyber-board';
 const $ = (id) => document.getElementById(id);
+bindStartLoading(['#btn-endless']);
 const store = createStore(GAME_ID);
 let camDirty = true;
 if (flags.reset) store.clear();
