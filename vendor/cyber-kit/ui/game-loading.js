@@ -46,8 +46,9 @@ function ensureRoot() {
   return root;
 }
 
-/** Show the shared transition. Resolves after it has faded out. */
-export function showGameLoading({ label = 'Loading...', hold = 900, fade = 320 } = {}) {
+/** Show the shared transition. Resolves after it has faded out.
+ *  Pass onLeave to keep the overlay up while navigating away (no flash of the old page). */
+export function showGameLoading({ label = 'Loading...', hold = 900, fade = 320, onLeave = null } = {}) {
   if (active) return Promise.resolve();
   const el = ensureRoot();
   if (!el) return Promise.resolve();
@@ -58,6 +59,10 @@ export function showGameLoading({ label = 'Loading...', hold = 900, fade = 320 }
   void el.offsetWidth;
   return new Promise((resolve) => {
     setTimeout(() => {
+      if (onLeave) {
+        try { onLeave(); } catch (e) { console.error('[game-loading] onLeave failed', e); }
+        return; // keep the overlay visible until the next page takes over
+      }
       el.classList.add('out');
       setTimeout(() => {
         el.classList.add('hidden');
